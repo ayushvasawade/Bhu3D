@@ -1,0 +1,164 @@
+{
+  "type": "FeatureCollection",
+  "name": "Pune_Cadastral_Parcels",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "metadata": {
+    "source": "Government GIS / Cadastral Map (Demo)",
+    "region": "Pune, Maharashtra, India",
+    "ward": "Ward 12 (Kothrud)",
+    "status": "DEMO DATA",
+    "datum": "WGS84 / EPSG:4326"
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "id": "PRC-PUN-0042-1A",
+      "properties": {
+        "parcelId": "PRC-PUN-0042-1A",
+        "surveyNumber": "42/1A",
+        "subDivision": "B-04",
+        "ulpin": "IN-MH-PUN-004281",
+        "wardNumber": "Ward 12 (Kothrud)",
+        "municipalZone": "PMC Zone 3",
+        "areaSqM": 2150,
+        "source": "Government GIS / Cadastral Map (Demo)",
+        "status": "DEMO",
+        "landUseZone": "R2 - High Density Residential",
+        "enclosedBuildings": ["BLD-PUN-00027", "BLD-PUN-00028"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.85625, 18.52005],
+            [73.85775, 18.52005],
+            [73.85775, 18.52115],
+            [73.85625, 18.52115],
+            [73.85625, 18.52005]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "PRC-PUN-0042-1B",
+      "properties": {
+        "parcelId": "PRC-PUN-0042-1B",
+        "surveyNumber": "42/1B",
+        "subDivision": "C-01",
+        "ulpin": "IN-MH-PUN-004282",
+        "wardNumber": "Ward 12 (Kothrud)",
+        "municipalZone": "PMC Zone 3",
+        "areaSqM": 1680,
+        "source": "Government GIS / Cadastral Map (Demo)",
+        "status": "DEMO",
+        "landUseZone": "C1 - Commercial / Civic",
+        "enclosedBuildings": ["BLD-PUN-00029"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.85545, 18.52075],
+            [73.85635, 18.52075],
+            [73.85635, 18.52145],
+            [73.85545, 18.52145],
+            [73.85545, 18.52075]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "PRC-PUN-0043-02",
+      "properties": {
+        "parcelId": "PRC-PUN-0043-02",
+        "surveyNumber": "43/2",
+        "subDivision": "A-01",
+        "ulpin": "IN-MH-PUN-004302",
+        "wardNumber": "Ward 12 (Kothrud)",
+        "municipalZone": "PMC Zone 3",
+        "areaSqM": 1950,
+        "source": "Government GIS / Cadastral Map (Demo)",
+        "status": "DEMO",
+        "landUseZone": "C2 - Mixed Commercial",
+        "enclosedBuildings": ["BLD-PUN-00030"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.85735, 18.51935],
+            [73.85825, 18.51935],
+            [73.85825, 18.52005],
+            [73.85735, 18.52005],
+            [73.85735, 18.51935]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "PRC-PUN-0041-08",
+      "properties": {
+        "parcelId": "PRC-PUN-0041-08",
+        "surveyNumber": "41/8",
+        "subDivision": "D-03",
+        "ulpin": "IN-MH-PUN-004108",
+        "wardNumber": "Ward 12 (Kothrud)",
+        "municipalZone": "PMC Zone 3",
+        "areaSqM": 2800,
+        "source": "Government GIS / Cadastral Map (Demo)",
+        "status": "DEMO",
+        "landUseZone": "R1 - Medium Density Residential",
+        "enclosedBuildings": ["BLD-PUN-00031", "BLD-PUN-00032"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.85480, 18.51885],
+            [73.85600, 18.51885],
+            [73.85600, 18.51995],
+            [73.85480, 18.51995],
+            [73.85480, 18.51885]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "PRC-PUN-0044-01",
+      "properties": {
+        "parcelId": "PRC-PUN-0044-01",
+        "surveyNumber": "44/1",
+        "subDivision": "E-02",
+        "ulpin": "IN-MH-PUN-004401",
+        "wardNumber": "Ward 12 (Kothrud)",
+        "municipalZone": "PMC Zone 3",
+        "areaSqM": 2400,
+        "source": "Government GIS / Cadastral Map (Demo)",
+        "status": "DEMO",
+        "landUseZone": "C3 - IT / Commercial",
+        "enclosedBuildings": ["BLD-PUN-00035"]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.85830, 18.52020],
+            [73.85915, 18.52020],
+            [73.85915, 18.52105],
+            [73.85830, 18.52105],
+            [73.85830, 18.52020]
+          ]
+        ]
+      }
+    }
+  ]
+}
