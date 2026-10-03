@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Building, Box, MapPin, X, ArrowRight, Layers, CheckCircle2, FlaskConical } from 'lucide-react';
 import { BuildingFootprint, Parcel } from '../../types/geospatial';
-import { RealLidarBuilding } from '../../types/lidar';
+import { RealLidarBuilding, LADatasetMetadata } from '../../types/lidar';
 import { PropertyRecord } from '../../types/property';
 import { DataProvenanceBadge } from '../common/DataProvenanceBadge';
 
@@ -24,6 +24,7 @@ interface PropertySearchCardProps {
   parcels: Parcel[];
   properties: PropertyRecord[];
   realLidarMetadata: RealLidarBuilding | null;
+  laMetadata?: LADatasetMetadata | null;
   isRealLidarMode: boolean;
   onSelectResult: (result: SearchResultItem) => void;
 }
@@ -33,6 +34,7 @@ export const PropertySearchCard: React.FC<PropertySearchCardProps> = ({
   parcels,
   properties,
   realLidarMetadata,
+  laMetadata,
   isRealLidarMode,
   onSelectResult
 }) => {
@@ -43,6 +45,25 @@ export const PropertySearchCard: React.FC<PropertySearchCardProps> = ({
   // Compile searchable inventory strictly adhering to Data Honesty
   const searchableItems = useMemo<SearchResultItem[]>(() => {
     const list: SearchResultItem[] = [];
+
+    // 0. Real LA USGS 3DEP LiDAR buildings
+    if (laMetadata?.buildings) {
+      laMetadata.buildings.forEach((bld) => {
+        list.push({
+          id: bld.id,
+          type: 'lidar',
+          title: bld.name || `LA Building ${bld.osmWayId}`,
+          subtitle: `Los Angeles, CA · ${bld.derivedHeightMeters}m LiDAR Height · ${bld.inferredFloors} Fl (Inferred)`,
+          status: 'REAL',
+          coordinates: {
+            latitude: bld.center.latitude,
+            longitude: bld.center.longitude,
+            altitude: bld.peakElevationAMSL + 80
+          },
+          rawData: bld
+        });
+      });
+    }
 
     // 1. Real Airborne LiDAR dataset
     if (realLidarMetadata) {
@@ -117,7 +138,7 @@ export const PropertySearchCard: React.FC<PropertySearchCardProps> = ({
     });
 
     return list;
-  }, [buildings, parcels, properties, realLidarMetadata]);
+  }, [buildings, parcels, properties, realLidarMetadata, laMetadata]);
 
   // Filtered results
   const filtered = useMemo(() => {

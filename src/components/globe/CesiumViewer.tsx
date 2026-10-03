@@ -9,7 +9,10 @@ import {
   LidarCompareSubMode,
   PointCloudRenderOptions,
   LidarPointCloudData,
-  LidarCameraPreset
+  LidarCameraPreset,
+  LidarDatasetId,
+  LABuildingRecord,
+  LADatasetMetadata
 } from '../../types/lidar';
 import { lidarService } from '../../services/lidarService';
 import { geospatialService } from '../../services/geospatialDataService';
@@ -25,10 +28,15 @@ interface CesiumViewerProps {
   onSelectBuilding?: (building: BuildingFootprint | null) => void;
   onCameraChange?: (telemetry: { latitude: number; longitude: number; altitude: number; heading: number }) => void;
   isRealLidarMode?: boolean;
+  activeDataset?: LidarDatasetId;
   realLidarMetadata?: RealLidarBuilding | null;
+  laMetadata?: LADatasetMetadata | null;
   cameraPreset?: LidarCameraPreset;
   selectedRealBuilding?: RealLidarBuilding | null;
   onSelectRealBuilding?: (building: RealLidarBuilding | null) => void;
+  selectedLABuilding?: LABuildingRecord | null;
+  onSelectLABuilding?: (building: LABuildingRecord | null) => void;
+  selectedFloor?: number | null;
   layers?: LayerVisibilityState;
   targetFlyLocation?: { latitude: number; longitude: number; altitude?: number } | null;
   lidarViewMode?: LidarViewMode;
@@ -45,10 +53,15 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   onSelectBuilding,
   onCameraChange,
   isRealLidarMode = true,
+  activeDataset = 'la_south_park',
   realLidarMetadata = null,
+  laMetadata = null,
   cameraPreset = 'overview',
   selectedRealBuilding = null,
   onSelectRealBuilding,
+  selectedLABuilding = null,
+  onSelectLABuilding,
+  selectedFloor = null,
   layers = {
     lidar: true,
     osmBuildings: true,
@@ -74,8 +87,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   const markerEntityRef = useRef<Cesium.Entity | null>(null);
   const realBuildingEntityRef = useRef<Cesium.Entity | null>(null);
   const realGroundMarkerRef = useRef<Cesium.Entity | null>(null);
+  const floorEntitiesRef = useRef<Cesium.Entity[]>([]);
   const pointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
   const cachedPointDataRef = useRef<LidarPointCloudData | null>(null);
+  const cachedLAPointDataRef = useRef<LidarPointCloudData | null>(null);
+  const laMetadataRef = useRef<LADatasetMetadata | null>(laMetadata);
+  laMetadataRef.current = laMetadata;
   const buildingEntitiesRef = useRef<Cesium.Entity[]>([]);
   const parcelEntitiesRef = useRef<Cesium.Entity[]>([]);
   const currentBaseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
@@ -179,9 +196,25 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
       // Update screen callout position on postRender
       removePostRenderListener = viewer.scene.postRender.addEventListener(() => {
-        const targetEntity = isRealLidarMode ? realBuildingEntityRef.current : markerEntityRef.current;
-        if (!targetEntity) return;
-        const pos = targetEntity.position?.getValue(viewer.clock.currentTime);
+        let pos: Cesium.Cartesian3 | undefined;
+        if (isRealLidarMode) {
+          if (activeDataset === 'la_south_park') {
+            if (selectedLABuilding) {
+              pos = Cesium.Cartesian3.fromDegrees(
+                selectedLABuilding.center.longitude,
+                selectedLABuilding.center.latitude,
+                selectedLABuilding.peakElevationAMSL + 5
+              );
+            } else {
+              pos = Cesium.Cartesian3.fromDegrees(-118.260903, 34.037095, 120);
+            }
+          } else if (realBuildingEntityRef.current) {
+            pos = realBuildingEntityRef.current.position?.getValue(viewer.clock.currentTime);
+          }
+        } else if (markerEntityRef.current) {
+          pos = markerEntityRef.current.position?.getValue(viewer.clock.currentTime);
+        }
+
         if (pos) {
           const screenPos = Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene, pos);
           if (screenPos) {
@@ -195,16 +228,27 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         }
       });
 
-      // Initial Camera: In Real LiDAR mode, fly directly to Utah State Capitol!
+      // Initial Camera: In Real LiDAR mode, fly directly to selected dataset
       if (isRealLidarMode) {
-        viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(-111.888200, 40.777394 - 0.0035, 380),
-          orientation: {
-            heading: Cesium.Math.toRadians(0),
-            pitch: Cesium.Math.toRadians(-32),
-            roll: 0
-          }
-        });
+        if (activeDataset === 'la_south_park') {
+          viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(-118.260903, 34.037095 - 0.0055, 420),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-35),
+              roll: 0
+            }
+          });
+        } else {
+          viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(-111.888200, 40.777394 - 0.0035, 380),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-32),
+              roll: 0
+            }
+          });
+        }
       } else {
         viewer.camera.setView({
           destination: Cesium.Cartesian3.fromDegrees(78.9629, 20.5937, 18000000),
@@ -219,15 +263,47 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       // Click handler for 3D building picking
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handler.setInputAction((movement: any) => {
+        // If in LA mode, pick nearest building to click position
+        if (activeDataset === 'la_south_park' && laMetadataRef.current?.buildings) {
+          const ray = viewer.camera.getPickRay(movement.position);
+          if (ray) {
+            const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+            if (cartesian) {
+              const carto = Cesium.Cartographic.fromCartesian(cartesian);
+              const clickLon = Cesium.Math.toDegrees(carto.longitude);
+              const clickLat = Cesium.Math.toDegrees(carto.latitude);
+              let bestBld: LABuildingRecord | null = null;
+              let minD = Infinity;
+              for (const b of laMetadataRef.current.buildings) {
+                const d = Math.hypot(b.center.longitude - clickLon, b.center.latitude - clickLat);
+                if (d < minD) {
+                  minD = d;
+                  bestBld = b;
+                }
+              }
+              if (bestBld && minD < 0.0015) {
+                onSelectLABuilding?.(bestBld);
+                return;
+              }
+            }
+          }
+        }
+
         const pickedObject = viewer.scene.pick(movement.position);
         if (Cesium.defined(pickedObject) && pickedObject.id) {
           const entity = pickedObject.id;
           if (
             (entity as any).isRealLidarBuilding ||
             entity.id === 'real-lidar-utah-capitol' ||
-            entity.id === 'real-lidar-ground-ring'
+            entity.id === 'real-lidar-ground-ring' ||
+            entity.id === 'real-lidar-la-buildings' ||
+            entity.id === 'real-lidar-la-ground-ring'
           ) {
-            onSelectRealBuilding?.(realLidarMetadata || null);
+            if (activeDataset === 'la_south_park' && laMetadataRef.current?.buildings?.[0]) {
+              onSelectLABuilding?.(laMetadataRef.current.buildings[0]);
+            } else {
+              onSelectRealBuilding?.(realLidarMetadata || null);
+            }
             return;
           }
           if ((entity as any).buildingData) {
@@ -334,45 +410,88 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     parcelEntitiesRef.current = [];
 
     // REAL LIDAR MODE (Primary Active Showcase)
-    if (isRealLidarMode && realLidarMetadata) {
-      const { longitude, latitude } = realLidarMetadata.geographicLocation;
-      const bldPos = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
+    if (isRealLidarMode) {
+      if (activeDataset === 'la_south_park') {
+        const centerLon = -118.260903;
+        const centerLat = 34.037095;
+        const centerAlt = 72.17;
 
-      // Add Reconstructed Watertight GLB Model
-      const bldEntity = viewer.entities.add({
-        id: 'real-lidar-utah-capitol',
-        name: realLidarMetadata.buildingName,
-        position: bldPos,
-        model: {
-          uri: realLidarMetadata.reconstructionPipeline.outputModelFile,
-          minimumPixelSize: 64,
-          maximumScale: 20000,
-          shadows: Cesium.ShadowMode.ENABLED,
-          heightReference: Cesium.HeightReference.NONE
-        }
-      });
-      (bldEntity as any).isRealLidarBuilding = true;
-      (bldEntity as any).lidarData = realLidarMetadata;
-      realBuildingEntityRef.current = bldEntity;
+        // Add Reconstructed Watertight GLB Model with 129 genuine buildings
+        const bldEntity = viewer.entities.add({
+          id: 'real-lidar-la-buildings',
+          name: 'USGS 3DEP LiDAR Reconstructed City (129 Meshes)',
+          position: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, centerAlt),
+          model: {
+            uri: '/models/la_usgs_buildings.glb',
+            minimumPixelSize: 64,
+            maximumScale: 20000,
+            shadows: Cesium.ShadowMode.ENABLED,
+            heightReference: Cesium.HeightReference.NONE
+          }
+        });
+        (bldEntity as any).isRealLidarBuilding = true;
+        realBuildingEntityRef.current = bldEntity;
 
-      // Add Ground Radar Ring around building precinct
-      const groundMarker = viewer.entities.add({
-        id: 'real-lidar-ground-ring',
-        name: 'Utah State Capitol Ground Datum (1,384.50m AMSL)',
-        position: Cesium.Cartesian3.fromDegrees(longitude, latitude, 1),
-        ellipse: {
-          semiMajorAxis: 160.0,
-          semiMinorAxis: 110.0,
-          height: 1,
-          material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.18),
-          outline: true,
-          outlineColor: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85),
-          outlineWidth: 2
-        }
-      });
-      realGroundMarkerRef.current = groundMarker;
+        // Add Ground Survey Bounds Radar Ring
+        const groundMarker = viewer.entities.add({
+          id: 'real-lidar-la-ground-ring',
+          name: 'USGS Survey Footprint Extent (DTLA South Park, 72.17m AMSL Datum)',
+          position: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, centerAlt + 0.5),
+          ellipse: {
+            semiMajorAxis: 320.0,
+            semiMinorAxis: 260.0,
+            height: centerAlt + 0.5,
+            material: Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.12),
+            outline: true,
+            outlineColor: Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.85),
+            outlineWidth: 2
+          }
+        });
+        realGroundMarkerRef.current = groundMarker;
 
-      return;
+        return;
+      }
+
+      if (realLidarMetadata) {
+        const { longitude, latitude } = realLidarMetadata.geographicLocation;
+        const bldPos = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
+
+        // Add Reconstructed Watertight GLB Model
+        const bldEntity = viewer.entities.add({
+          id: 'real-lidar-utah-capitol',
+          name: realLidarMetadata.buildingName,
+          position: bldPos,
+          model: {
+            uri: realLidarMetadata.reconstructionPipeline.outputModelFile,
+            minimumPixelSize: 64,
+            maximumScale: 20000,
+            shadows: Cesium.ShadowMode.ENABLED,
+            heightReference: Cesium.HeightReference.NONE
+          }
+        });
+        (bldEntity as any).isRealLidarBuilding = true;
+        (bldEntity as any).lidarData = realLidarMetadata;
+        realBuildingEntityRef.current = bldEntity;
+
+        // Add Ground Radar Ring around building precinct
+        const groundMarker = viewer.entities.add({
+          id: 'real-lidar-ground-ring',
+          name: 'Utah State Capitol Ground Datum (1,384.50m AMSL)',
+          position: Cesium.Cartesian3.fromDegrees(longitude, latitude, 1),
+          ellipse: {
+            semiMajorAxis: 160.0,
+            semiMinorAxis: 110.0,
+            height: 1,
+            material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.18),
+            outline: true,
+            outlineColor: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85),
+            outlineWidth: 2
+          }
+        });
+        realGroundMarkerRef.current = groundMarker;
+
+        return;
+      }
     }
 
     // SANDBOX MODE (Indian 3D Cadastre Concept)
@@ -468,10 +587,83 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     };
 
     loadGeospatialLayers();
+  }, [currentProperty, selectedBuilding, isRealLidarMode, activeDataset, realLidarMetadata]);
+
+  // 3c. Manage Selected LA Building Footprint & Inferred Floor Slices
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    // Clear existing floor entities
+    floorEntitiesRef.current.forEach((entity) => viewer.entities.remove(entity));
+    floorEntitiesRef.current = [];
+
+    if (activeDataset !== 'la_south_park' || !selectedLABuilding) return;
+
+    const newFloorEntities: Cesium.Entity[] = [];
+    const coords = selectedLABuilding.footprintCoordinates;
+    if (!coords || coords.length < 3) return;
+
+    const flatDegrees: number[] = [];
+    coords.forEach(([lon, lat]) => {
+      flatDegrees.push(lon, lat);
+    });
+
+    // 1. Ground Footprint Outline Ring
+    const groundOutline = viewer.entities.add({
+      id: `la-bld-${selectedLABuilding.id}-ground-outline`,
+      name: `${selectedLABuilding.name} Footprint Base`,
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArrayHeights(
+          coords.map(([lon, lat]) => [lon, lat, selectedLABuilding.localGroundAMSL + 0.3]).flat()
+        ),
+        width: 3.5,
+        material: Cesium.Color.fromCssColorString('#00f2fe')
+      }
+    });
+    newFloorEntities.push(groundOutline);
+
+    // 2. Inferred Floor Slices:
+    // If selectedFloor is specified, highlight that floor with prominent cyan fill & white edge
+    // Otherwise render all inferred floors as subtle translucent strata
+    selectedLABuilding.levels.forEach((lvl) => {
+      const isTargetFloor = selectedFloor !== null && selectedFloor !== undefined
+        ? lvl.level === selectedFloor
+        : false;
+
+      const floorColor = isTargetFloor
+        ? Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.65)
+        : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.12);
+
+      const outlineColor = isTargetFloor
+        ? Cesium.Color.WHITE
+        : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.4);
+
+      const floorEntity = viewer.entities.add({
+        id: `la-bld-${selectedLABuilding.id}-floor-${lvl.level}`,
+        name: `${lvl.floorName} (Inferred: ${lvl.zMinAMSL.toFixed(1)}m - ${lvl.zMaxAMSL.toFixed(1)}m AMSL)`,
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(flatDegrees),
+          height: lvl.zMinAMSL,
+          extrudedHeight: lvl.zMaxAMSL,
+          material: floorColor,
+          outline: true,
+          outlineColor: outlineColor,
+          outlineWidth: isTargetFloor ? 3 : 1
+        }
+      });
+      newFloorEntities.push(floorEntity);
+    });
+
+    floorEntitiesRef.current = newFloorEntities;
+
     return () => {
-      isCancelled = true;
+      if (viewer && !viewer.isDestroyed()) {
+        newFloorEntities.forEach((entity) => viewer.entities.remove(entity));
+      }
+      floorEntitiesRef.current = [];
     };
-  }, [currentProperty, selectedBuilding, isRealLidarMode, realLidarMetadata]);
+  }, [activeDataset, selectedLABuilding, selectedFloor]);
 
   // Helper: Topographic elevation colormap (Blue -> Cyan -> Green -> Yellow -> Red)
   const getTopographicColor = (amsl: number, minZ = 1377.0, maxZ = 1459.0): Cesium.Color => {
@@ -517,7 +709,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       entity.show = layers.parcels;
     });
 
-    if (!isRealLidarMode || !realLidarMetadata) {
+    if (!isRealLidarMode || (activeDataset !== 'la_south_park' && !realLidarMetadata)) {
       if (pointPrimitivesRef.current && !viewer.isDestroyed()) {
         viewer.scene.primitives.remove(pointPrimitivesRef.current);
         pointPrimitivesRef.current = null;
@@ -568,11 +760,29 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
     const loadAndRenderPoints = async () => {
       try {
-        let pointData = cachedPointDataRef.current;
-        if (!pointData) {
-          pointData = await lidarService.getPointCloudData();
-          cachedPointDataRef.current = pointData;
+        const isLA = activeDataset === 'la_south_park';
+        let pointData: LidarPointCloudData;
+        let centerCartesian: Cesium.Cartesian3;
+
+        if (isLA) {
+          if (!cachedLAPointDataRef.current) {
+            cachedLAPointDataRef.current = await lidarService.getLAPointCloudData();
+          }
+          pointData = cachedLAPointDataRef.current;
+          centerCartesian = Cesium.Cartesian3.fromDegrees(
+            pointData.centerLon || -118.260903,
+            pointData.centerLat || 34.037095,
+            pointData.centerAlt || 72.17
+          );
+        } else {
+          if (!cachedPointDataRef.current) {
+            cachedPointDataRef.current = await lidarService.getPointCloudData();
+          }
+          pointData = cachedPointDataRef.current;
+          const { longitude, latitude } = realLidarMetadata!.geographicLocation;
+          centerCartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
         }
+
         if (isCancelled || !viewerRef.current || viewer.isDestroyed()) return;
 
         // Reset existing primitive collection if already exists
@@ -585,8 +795,6 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         viewer.scene.primitives.add(pointCollection);
         pointPrimitivesRef.current = pointCollection;
 
-        const { longitude, latitude } = realLidarMetadata.geographicLocation;
-        const centerCartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
         const enuMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(centerCartesian);
 
         const count = pointData.count;
@@ -608,12 +816,19 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           if (densityPct === 50 && i % 2 !== 0) continue;
           if (densityPct === 75 && i % 4 === 3) continue;
 
-          const lx = positions[i * 3];
-          const ly = positions[i * 3 + 1];
-          const lz = positions[i * 3 + 2];
+          let localPt: Cesium.Cartesian3;
+          if (isLA) {
+            const dx = positions[i * 3];
+            const dy = positions[i * 3 + 1];
+            const dz = positions[i * 3 + 2];
+            localPt = new Cesium.Cartesian3(dx, dy, dz);
+          } else {
+            const lx = positions[i * 3];
+            const ly = positions[i * 3 + 1];
+            const lz = positions[i * 3 + 2];
+            localPt = new Cesium.Cartesian3(lx, -lz, ly);
+          }
 
-          // Transform local ENU coordinates to true world Cartesian3
-          const localPt = new Cesium.Cartesian3(lx, -lz, ly);
           const worldPos = Cesium.Matrix4.multiplyByPoint(enuMatrix, localPt, new Cesium.Cartesian3());
 
           let pointColor: Cesium.Color;
@@ -625,7 +840,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
               255
             );
           } else if (colorMode === 'elevation') {
-            pointColor = getTopographicColor(amslElevations[i]);
+            const minZ = isLA ? 72.0 : 1377.0;
+            const maxZ = isLA ? 130.0 : 1459.0;
+            pointColor = getTopographicColor(amslElevations[i], minZ, maxZ);
           } else if (colorMode === 'classification') {
             pointColor =
               classifications[i] === 2
@@ -656,6 +873,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     };
   }, [
     isRealLidarMode,
+    activeDataset,
     realLidarMetadata,
     lidarViewMode,
     compareSubMode,
@@ -688,9 +906,78 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
+    if (isRealLidarMode) {
+      if (activeDataset === 'la_south_park') {
+        const centerLon = -118.260903;
+        const centerLat = 34.037095;
 
-    if (isRealLidarMode && realLidarMetadata) {
-      const { longitude, latitude } = realLidarMetadata.geographicLocation;
+        if (viewLevel === 'global') {
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, 14000000),
+            orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },
+            duration: 2.0
+          });
+          return;
+        }
+
+        if (viewLevel === 'city') {
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.05, 9000),
+            orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-55), roll: 0 },
+            duration: 2.0
+          });
+          return;
+        }
+
+        switch (cameraPreset) {
+          case 'overview':
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0055, 420),
+              orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-35), roll: 0 },
+              duration: 1.8
+            });
+            break;
+          case 'domeCloseUp':
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(-118.2625, 34.0372 - 0.0015, 140),
+              orientation: { heading: Cesium.Math.toRadians(350), pitch: Cesium.Math.toRadians(-22), roll: 0 },
+              duration: 1.8
+            });
+            break;
+          case 'grandSouthPortico':
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0028, 120),
+              orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-15), roll: 0 },
+              duration: 1.8
+            });
+            break;
+          case 'aerialTopDown':
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, 650),
+              orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-90), roll: 0 },
+              duration: 1.8
+            });
+            break;
+          case 'frontElevation':
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0035, 110),
+              orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-8), roll: 0 },
+              duration: 1.8
+            });
+            break;
+          case 'sideElevation':
+            viewer.camera.flyTo({
+              destination: Cesium.Cartesian3.fromDegrees(centerLon + 0.0035, centerLat, 110),
+              orientation: { heading: Cesium.Math.toRadians(270), pitch: Cesium.Math.toRadians(-8), roll: 0 },
+              duration: 1.8
+            });
+            break;
+        }
+        return;
+      }
+
+      if (realLidarMetadata) {
+        const { longitude, latitude } = realLidarMetadata.geographicLocation;
 
       if (viewLevel === 'global') {
         viewer.camera.flyTo({
@@ -794,6 +1081,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       }
       return;
     }
+  }
 
     // Sandbox Indian mode camera
     const { latitude, longitude } = currentProperty.coordinates;
@@ -858,7 +1146,27 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         });
         break;
     }
-  }, [viewLevel, currentProperty, isRealLidarMode, realLidarMetadata, cameraPreset]);
+  }, [viewLevel, currentProperty, isRealLidarMode, activeDataset, realLidarMetadata, cameraPreset]);
+
+  // 4b. Fly camera to selected LA Building
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !selectedLABuilding || activeDataset !== 'la_south_park') return;
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(
+        selectedLABuilding.center.longitude,
+        selectedLABuilding.center.latitude - 0.002,
+        selectedLABuilding.peakElevationAMSL + 90
+      ),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-32),
+        roll: 0
+      },
+      duration: 1.5
+    });
+  }, [selectedLABuilding, activeDataset]);
 
   if (initError) {
     return (
@@ -884,7 +1192,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       <div ref={containerRef} className="w-full h-full" />
 
       {/* Floating 3D Callout Banner */}
-      {calloutScreenPos.visible && !selectedBuilding && !selectedRealBuilding && (
+      {calloutScreenPos.visible && !selectedBuilding && !selectedRealBuilding && !selectedLABuilding && (
         <div
           style={{
             left: `${calloutScreenPos.x}px`,
@@ -893,7 +1201,23 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           }}
           className="absolute z-20 pointer-events-none transition-all duration-100 ease-out flex flex-col items-center"
         >
-          {isRealLidarMode && realLidarMetadata ? (
+          {isRealLidarMode && activeDataset === 'la_south_park' ? (
+            <div
+              onClick={() => {
+                if (laMetadataRef.current?.buildings?.[0]) {
+                  onSelectLABuilding?.(laMetadataRef.current.buildings[0]);
+                }
+              }}
+              className="gis-glass-panel px-3.5 py-1.5 rounded-full flex items-center space-x-2 shadow-2xl border border-cyan-500/40 animate-fadeIn pointer-events-auto cursor-pointer hover:border-cyan-400 transition-all bg-black/85 backdrop-blur-md"
+            >
+              <Box className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span className="text-xs font-bold text-white tracking-tight">USGS 3DEP LiDAR (Los Angeles DTLA)</span>
+              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800">
+                129 3D Buildings
+              </span>
+              <DataProvenanceBadge status="REAL" label="REAL USGS" size="sm" />
+            </div>
+          ) : isRealLidarMode && realLidarMetadata ? (
             <div
               onClick={() => onSelectRealBuilding?.(realLidarMetadata)}
               className="gis-glass-panel px-3.5 py-1.5 rounded-full flex items-center space-x-2 shadow-2xl border border-white/30 animate-fadeIn pointer-events-auto cursor-pointer hover:border-white transition-all bg-black/85 backdrop-blur-md"

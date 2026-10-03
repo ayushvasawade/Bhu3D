@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Box } from 'lucide-react';
 import { Navbar } from './components/layout/Navbar';
 import { FooterHUD } from './components/layout/FooterHUD';
 import { CesiumViewer } from './components/globe/CesiumViewer';
@@ -10,11 +11,14 @@ import { ViewLevelNav } from './components/search/ViewLevelNav';
 import { PropertyIntelligencePanel } from './components/property/PropertyIntelligencePanel';
 import { RealLidarControlCard } from './components/lidar/RealLidarControlCard';
 import { RealLidarBuildingCard } from './components/lidar/RealLidarBuildingCard';
+import { LAControlCard } from './components/lidar/LAControlCard';
+import { LABuildingCard } from './components/lidar/LABuildingCard';
 import { RealLidarProvenancePanel } from './components/lidar/RealLidarProvenancePanel';
 import { RealLidarSideBySideModal } from './components/lidar/RealLidarSideBySideModal';
 import { RealLidarMeshInspectorModal } from './components/lidar/RealLidarMeshInspectorModal';
 import { LayerControlPanel, LayerVisibilityState } from './components/globe/LayerControlPanel';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { DataProvenanceBadge } from './components/common/DataProvenanceBadge';
 import { PropertyPassportModal } from './components/modals/PropertyPassportModal';
 import { AboutModal } from './components/modals/AboutModal';
 import { HowItWorksModal } from './components/modals/HowItWorksModal';
@@ -28,19 +32,27 @@ import {
   LidarViewMode,
   LidarCompareSubMode,
   PointCloudRenderOptions,
-  LidarCameraPreset
+  LidarCameraPreset,
+  LidarDatasetId,
+  LABuildingRecord,
+  LADatasetMetadata
 } from './types/lidar';
 import { PropertyPassportData, PrototypeRole } from './types/intelligence';
 import { geospatialService } from './services/geospatialDataService';
 import { realBuildingDataService } from './services/realBuildingDataService';
+import { lidarService } from './services/lidarService';
 import { copernicusService } from './services/copernicusService';
 import { intelligenceService } from './services/intelligenceService';
 
 export function App() {
   // Mode selection: Real LiDAR Demonstration (Default & Primary) vs Conceptual Indian Cadastre Sandbox
   const [isRealLidarMode, setIsRealLidarMode] = useState<boolean>(true);
+  const [activeDataset, setActiveDataset] = useState<LidarDatasetId>('la_south_park');
   const [realLidarMetadata, setRealLidarMetadata] = useState<RealLidarBuilding | null>(null);
+  const [laMetadata, setLaMetadata] = useState<LADatasetMetadata | null>(null);
   const [selectedRealBuilding, setSelectedRealBuilding] = useState<RealLidarBuilding | null>(null);
+  const [selectedLABuilding, setSelectedLABuilding] = useState<LABuildingRecord | null>(null);
+  const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [cameraPreset, setCameraPreset] = useState<LidarCameraPreset>('overview');
   const [isProvenancePanelOpen, setIsProvenancePanelOpen] = useState<boolean>(true);
   const [isMeshInspectorOpen, setIsMeshInspectorOpen] = useState<boolean>(false);
@@ -100,16 +112,26 @@ export function App() {
   const [isFullscreen3DOpen, setIsFullscreen3DOpen] = useState(false);
   const [passportModalData, setPassportModalData] = useState<PropertyPassportData | null>(null);
 
-  // Real-time HUD telemetry state (Defaults to Utah State Capitol coordinates)
+  // Real-time HUD telemetry state (Defaults to Los Angeles USGS coordinates)
   const [telemetry, setTelemetry] = useState({
-    latitude: 40.7774,
-    longitude: -111.8882,
-    altitude: 380,
+    latitude: 34.037095,
+    longitude: -118.260903,
+    altitude: 420,
     heading: 0
   });
 
   // Load real LiDAR metadata & OSM data on initial mount
   useEffect(() => {
+    // 1. Fetch LA USGS 3DEP LiDAR dataset metadata
+    lidarService.getLAMetadata()
+      .then((data) => {
+        setLaMetadata(data);
+      })
+      .catch((err) => {
+        console.error('[App] Failed to load LA USGS LiDAR metadata:', err);
+      });
+
+    // 2. Fetch Utah Capitol metadata
     realBuildingDataService.getRealBuilding()
       .then((data) => {
         setRealLidarMetadata(data);
@@ -186,17 +208,30 @@ export function App() {
     if (result.type === 'lidar') {
       setIsRealLidarMode(true);
       setSelectedBuilding(null);
-      setSelectedRealBuilding(realLidarMetadata);
+      if (result.rawData?.levels) {
+        // LA USGS 3DEP building selected
+        setActiveDataset('la_south_park');
+        setSelectedLABuilding(result.rawData as LABuildingRecord);
+        setSelectedRealBuilding(null);
+        setSelectedFloor(null);
+      } else {
+        // Utah Capitol selected
+        setActiveDataset('utah_capitol');
+        setSelectedRealBuilding(realLidarMetadata);
+        setSelectedLABuilding(null);
+        setSelectedFloor(null);
+      }
       setIsProvenancePanelOpen(true);
       setCameraPreset('overview');
       setTargetFlyLocation({
         latitude: result.coordinates.latitude,
         longitude: result.coordinates.longitude,
-        altitude: 380
+        altitude: result.coordinates.altitude || 380
       });
     } else if (result.type === 'osm_building') {
       setIsRealLidarMode(false);
       setSelectedRealBuilding(null);
+      setSelectedLABuilding(null);
       const bld = result.rawData as BuildingFootprint;
       setSelectedBuilding(bld);
       setIsProvenancePanelOpen(true);
@@ -209,6 +244,7 @@ export function App() {
     } else if (result.type === 'parcel') {
       setIsRealLidarMode(false);
       setSelectedRealBuilding(null);
+      setSelectedLABuilding(null);
       setViewLevel('layers');
       setTargetFlyLocation({
         latitude: result.coordinates.latitude,
@@ -218,6 +254,7 @@ export function App() {
     } else if (result.type === 'demo_lab') {
       setIsRealLidarMode(false);
       setSelectedRealBuilding(null);
+      setSelectedLABuilding(null);
       const prop = result.rawData as PropertyRecord;
       setCurrentProperty(prop);
       setViewLevel('ownership');
@@ -245,7 +282,9 @@ export function App() {
             selectedBuilding={selectedBuilding}
             onSelectBuilding={handleBuildingClick}
             isRealLidarMode={isRealLidarMode}
+            activeDataset={activeDataset}
             realLidarMetadata={realLidarMetadata}
+            laMetadata={laMetadata}
             cameraPreset={cameraPreset}
             selectedRealBuilding={selectedRealBuilding}
             onSelectRealBuilding={(bld) => {
@@ -254,6 +293,13 @@ export function App() {
                 setIsProvenancePanelOpen(true);
               }
             }}
+            selectedLABuilding={selectedLABuilding}
+            onSelectLABuilding={(bld) => {
+              setSelectedLABuilding(bld);
+              setSelectedFloor(null);
+              setIsProvenancePanelOpen(true);
+            }}
+            selectedFloor={selectedFloor}
             onCameraChange={(cam) => {
               setTelemetry({
                 latitude: cam.latitude,
@@ -353,16 +399,26 @@ export function App() {
 
           <div className="w-px h-3.5 bg-zinc-800 my-auto mx-0.5" />
 
-          <button
-            onClick={() => setIsMeshInspectorOpen(true)}
-            className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800/80 whitespace-nowrap"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
-            <span>INSPECTOR &amp; QC</span>
-            <span className="text-[9px] px-1 py-0.2 rounded font-semibold bg-zinc-800 text-zinc-400">
-              METRICS
-            </span>
-          </button>
+          {activeDataset === 'utah_capitol' ? (
+            <button
+              onClick={() => setIsMeshInspectorOpen(true)}
+              className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800/80 whitespace-nowrap"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+              <span>INSPECTOR &amp; QC</span>
+              <span className="text-[9px] px-1 py-0.2 rounded font-semibold bg-zinc-800 text-zinc-400">
+                METRICS
+              </span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono text-zinc-300 bg-zinc-900/60 border border-zinc-800/60 whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
+              <span className="text-[11px] font-semibold text-white">USGS LA 3DEP</span>
+              <span className="text-[9px] px-1 py-0.2 rounded font-mono bg-cyan-950 text-cyan-400 border border-cyan-800/60">
+                129 Meshes
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -372,38 +428,88 @@ export function App() {
         className="absolute top-20 left-4 bottom-24 z-20 flex flex-col space-y-2 pointer-events-none w-72 sm:w-80 max-w-[325px] max-h-[calc(100vh-11.5rem)] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1"
       >
         {/* Mode & Camera Controls */}
-        <RealLidarControlCard
-          metadata={realLidarMetadata}
-          isRealLidarMode={isRealLidarMode}
-          onToggleMode={(mode) => {
-            setIsRealLidarMode(mode);
-            setSelectedRealBuilding(null);
-            setSelectedBuilding(null);
-            if (mode) {
-              setIsProvenancePanelOpen(true);
-              setCameraPreset('overview');
+        {activeDataset === 'la_south_park' ? (
+          <LAControlCard
+            metadata={laMetadata}
+            activeDataset={activeDataset}
+            onSelectDataset={(ds) => {
+              setActiveDataset(ds);
+              setSelectedRealBuilding(null);
+              setSelectedLABuilding(null);
+              setSelectedBuilding(null);
+              setSelectedFloor(null);
+              if (ds === 'la_south_park') {
+                setTargetFlyLocation({ latitude: 34.037095, longitude: -118.260903, altitude: 420 });
+              } else {
+                setTargetFlyLocation({ latitude: 40.7774, longitude: -111.8882, altitude: 380 });
+              }
+            }}
+            isRealLidarMode={isRealLidarMode}
+            onToggleMode={(mode: boolean) => {
+              setIsRealLidarMode(mode);
+              setSelectedRealBuilding(null);
+              setSelectedLABuilding(null);
+              setSelectedBuilding(null);
+              setSelectedFloor(null);
+            }}
+            cameraPreset={cameraPreset}
+            onSelectCameraPreset={(preset: LidarCameraPreset) => {
+              setCameraPreset(preset);
+              if (viewLevel !== 'buildings') {
+                setViewLevel('buildings');
+              }
+            }}
+            lidarViewMode={lidarViewMode}
+            onChangeViewMode={setLidarViewMode}
+            compareSubMode={compareSubMode}
+            onChangeCompareSubMode={setCompareSubMode}
+            pointCloudOptions={pointCloudOptions}
+            onChangePointCloudOptions={(opts) =>
+              setPointCloudOptions((prev) => ({ ...prev, ...opts }))
             }
-          }}
-          cameraPreset={cameraPreset}
-          onSelectCameraPreset={(preset) => {
-            setCameraPreset(preset);
-            if (viewLevel !== 'buildings') {
-              setViewLevel('buildings');
+            selectedBuilding={selectedLABuilding}
+            onSelectBuilding={(bld) => {
+              setSelectedLABuilding(bld);
+              setSelectedFloor(null);
+            }}
+            onResetCamera={() => setCameraPreset('overview')}
+          />
+        ) : (
+          <RealLidarControlCard
+            metadata={realLidarMetadata}
+            isRealLidarMode={isRealLidarMode}
+            onToggleMode={(mode) => {
+              setIsRealLidarMode(mode);
+              setSelectedRealBuilding(null);
+              setSelectedLABuilding(null);
+              setSelectedBuilding(null);
+              setSelectedFloor(null);
+              if (mode) {
+                setIsProvenancePanelOpen(true);
+                setCameraPreset('overview');
+              }
+            }}
+            cameraPreset={cameraPreset}
+            onSelectCameraPreset={(preset) => {
+              setCameraPreset(preset);
+              if (viewLevel !== 'buildings') {
+                setViewLevel('buildings');
+              }
+            }}
+            onOpenProvenance={() => setIsProvenancePanelOpen(!isProvenancePanelOpen)}
+            lidarViewMode={lidarViewMode}
+            onChangeViewMode={setLidarViewMode}
+            compareSubMode={compareSubMode}
+            onChangeCompareSubMode={setCompareSubMode}
+            pointCloudOptions={pointCloudOptions}
+            onChangePointCloudOptions={(opts) =>
+              setPointCloudOptions((prev) => ({ ...prev, ...opts }))
             }
-          }}
-          onOpenProvenance={() => setIsProvenancePanelOpen(!isProvenancePanelOpen)}
-          lidarViewMode={lidarViewMode}
-          onChangeViewMode={setLidarViewMode}
-          compareSubMode={compareSubMode}
-          onChangeCompareSubMode={setCompareSubMode}
-          pointCloudOptions={pointCloudOptions}
-          onChangePointCloudOptions={(opts) =>
-            setPointCloudOptions((prev) => ({ ...prev, ...opts }))
-          }
-          onOpenSideBySide={() => setIsSideBySideOpen(true)}
-          onOpenInspector={() => setIsMeshInspectorOpen(true)}
-          onResetCamera={() => setCameraPreset('overview')}
-        />
+            onOpenSideBySide={() => setIsSideBySideOpen(true)}
+            onOpenInspector={() => setIsMeshInspectorOpen(true)}
+            onResetCamera={() => setCameraPreset('overview')}
+          />
+        )}
 
         {/* Real Geospatial Building & Property Search */}
         <PropertySearchCard
@@ -411,6 +517,7 @@ export function App() {
           parcels={allParcels}
           properties={properties}
           realLidarMetadata={realLidarMetadata}
+          laMetadata={laMetadata}
           isRealLidarMode={isRealLidarMode}
           onSelectResult={handleSearchResult}
         />
@@ -444,8 +551,8 @@ export function App() {
         </div>
       </aside>
 
-      {/* 4. Clicked Real LiDAR Building Information Card */}
-      {selectedRealBuilding && isRealLidarMode && (
+      {/* 4. Clicked Real LiDAR Building Information Card (Utah) */}
+      {selectedRealBuilding && isRealLidarMode && activeDataset === 'utah_capitol' && (
         <RealLidarBuildingCard
           metadata={selectedRealBuilding}
           onClose={() => setSelectedRealBuilding(null)}
@@ -472,14 +579,64 @@ export function App() {
       >
         {isProvenancePanelOpen && (
           isRealLidarMode ? (
-            <RealLidarProvenancePanel
-              metadata={realLidarMetadata}
-              onCameraPreset={setCameraPreset}
-              activeCameraPreset={cameraPreset}
-              onClose={() => setIsProvenancePanelOpen(false)}
-              onOpenSideBySide={() => setIsSideBySideOpen(true)}
-              onOpenInspector={() => setIsMeshInspectorOpen(true)}
-            />
+            activeDataset === 'la_south_park' ? (
+              selectedLABuilding ? (
+                <LABuildingCard
+                  building={selectedLABuilding}
+                  onClose={() => {
+                    setSelectedLABuilding(null);
+                    setSelectedFloor(null);
+                  }}
+                  selectedFloor={selectedFloor}
+                  onSelectFloor={setSelectedFloor}
+                />
+              ) : (
+                <div className="gis-glass-panel rounded-3xl p-5 border border-zinc-800 shadow-2xl pointer-events-auto backdrop-blur-xl text-white">
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                    <div className="flex items-center space-x-2">
+                      <div className="p-2 rounded-xl bg-cyan-950/80 text-cyan-400 border border-cyan-800">
+                        <Box className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider block">USGS 3DEP Survey</span>
+                        <h4 className="text-sm font-bold text-white">DTLA South Park Precinct</h4>
+                      </div>
+                    </div>
+                    <DataProvenanceBadge status="REAL" label="REAL LiDAR" size="sm" />
+                  </div>
+                  <p className="text-xs text-zinc-400 mt-3 leading-relaxed">
+                    Select any of the 129 3D reconstructed buildings from the dropdown or click directly on the 3D globe to inspect real elevation, footprint dimensions, and inferred floor stratification.
+                  </p>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-mono">
+                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[9px]">SOURCE CRS</span>
+                      <span className="text-white font-bold">EPSG:3857</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[9px]">DATUM (AMSL)</span>
+                      <span className="text-cyan-400 font-bold">72.17 m</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[9px]">RAW SURVEY</span>
+                      <span className="text-white font-bold">3.49M pts</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <span className="text-zinc-500 block text-[9px]">BUILDINGS</span>
+                      <span className="text-white font-bold">129 Meshes</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <RealLidarProvenancePanel
+                metadata={realLidarMetadata}
+                onCameraPreset={setCameraPreset}
+                activeCameraPreset={cameraPreset}
+                onClose={() => setIsProvenancePanelOpen(false)}
+                onOpenSideBySide={() => setIsSideBySideOpen(true)}
+                onOpenInspector={() => setIsMeshInspectorOpen(true)}
+              />
+            )
           ) : (
             <PropertyIntelligencePanel
               building={selectedBuilding}
