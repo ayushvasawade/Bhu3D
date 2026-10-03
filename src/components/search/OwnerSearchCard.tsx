@@ -101,13 +101,13 @@ export const OwnerSearchCard: React.FC<OwnerSearchCardProps> = ({
                     : 'bg-slate-800/60 text-slate-300 hover:bg-slate-700/60 hover:text-white border border-slate-700/50'
                 }`}
               >
-                {p.ownerName} ({p.city})
+                {p.propertyName} ({p.city})
               </button>
             );
           })}
         </div>
-        <p className="mt-2 text-[10px] text-slate-400/80 italic">
-          e.g. Saharsh, Priya, Rohan... (simulated cadastre data)
+        <p className="mt-2 text-[10px] text-zinc-400 italic">
+          Bhu3D Concept Lab demo models (isolated from real cadastre)
         </p>
       </div>
     </div>

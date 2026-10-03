@@ -229,9 +229,9 @@ class GeospatialDataService {
         {
           id: 'lidar',
           name: 'LiDAR Point Cloud',
-          status: 'PLANNED',
-          detail: 'Drone LiDAR (Planned)',
-          icon: 'circle'
+          status: 'LOADED',
+          detail: 'OpenTopography Real LiDAR (3.48M pts)',
+          icon: 'check'
         },
         {
           id: 'floorplans',

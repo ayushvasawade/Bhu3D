@@ -12,6 +12,8 @@ export interface RoomItem {
 export interface PropertyRecord {
   id: string;
   ownerName: string;
+  propertyName?: string;
+  isLabDemo?: boolean;
   propertyType: 'Apartment (Flat)' | 'Commercial Suite' | 'Penthouse' | 'Duplex';
   city: string;
   state: string;

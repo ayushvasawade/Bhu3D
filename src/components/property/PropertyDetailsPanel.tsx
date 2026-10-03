@@ -56,7 +56,7 @@ export const PropertyDetailsPanel: React.FC<PropertyDetailsPanelProps> = ({
           )}
           <div>
             <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
-              {property.ownerName}'s Property
+              {property.propertyName}
             </h2>
             <div className="flex items-center space-x-1 text-xs text-sky-400 font-medium">
               <MapPin className="w-3 h-3 text-sky-400 shrink-0" />

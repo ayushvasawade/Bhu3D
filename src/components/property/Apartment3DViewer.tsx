@@ -27,12 +27,13 @@ export const Apartment3DViewer: React.FC<Apartment3DViewerProps> = ({
   useEffect(() => {
     if (!mountRef.current) return;
     const container = mountRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = container.clientWidth || 360;
+    const height = container.clientHeight || 220;
 
     // 1. Scene Setup
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a101d);
+
 
     // 2. Camera Setup (Isometric / Axonometric perspective)
     const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 100);
@@ -141,10 +142,12 @@ export const Apartment3DViewer: React.FC<Apartment3DViewerProps> = ({
     // BUILD ISOMETRIC ARCHITECTURAL CUTAWAY UNIT
     // ==========================================
     const unitGroup = new THREE.Group();
+    unitGroup.visible = viewMode === 'unit';
     modelGroup.add(unitGroup);
 
     // Floor Base (Slab)
     const floorSlabGeo = new THREE.BoxGeometry(5.2, 0.2, 4.4);
+
     const floorSlabMesh = new THREE.Mesh(floorSlabGeo, wallMaterial);
     floorSlabMesh.position.set(0, -0.1, 0);
     floorSlabMesh.receiveShadow = true;
@@ -325,7 +328,7 @@ export const Apartment3DViewer: React.FC<Apartment3DViewerProps> = ({
     // BUILD VERTICAL 3D CADASTRE STACK (TOWER)
     // ==========================================
     const stackGroup = new THREE.Group();
-    stackGroup.visible = false;
+    stackGroup.visible = viewMode === 'stack';
     modelGroup.add(stackGroup);
 
     // Multi-story building slices
@@ -489,6 +492,32 @@ export const Apartment3DViewer: React.FC<Apartment3DViewerProps> = ({
 
       {/* Top Controls Overlay */}
       <div className="absolute top-2.5 right-2.5 flex items-center space-x-1.5 z-20">
+        {/* Unit vs Floor Stack Mode Toggle */}
+        <div className="flex items-center p-0.5 rounded-lg bg-slate-900/90 border border-sky-500/30">
+          <button
+            onClick={() => setViewMode('unit')}
+            className={`px-2 py-1 rounded text-[10px] font-semibold transition-all ${
+              viewMode === 'unit'
+                ? 'bg-sky-500 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Inspect Unit Layout"
+          >
+            Unit
+          </button>
+          <button
+            onClick={() => setViewMode('stack')}
+            className={`px-2 py-1 rounded text-[10px] font-semibold transition-all ${
+              viewMode === 'stack'
+                ? 'bg-sky-500 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Inspect Estimated Vertical Stack"
+          >
+            Stack
+          </button>
+        </div>
+
         <button
           onClick={handleResetCamera}
           title="Reset 3D Camera"
@@ -507,6 +536,7 @@ export const Apartment3DViewer: React.FC<Apartment3DViewerProps> = ({
           </button>
         )}
       </div>
+
 
       {/* Bottom overlay: View Mode toggle & Hint */}
       <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-20">

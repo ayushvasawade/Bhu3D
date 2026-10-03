@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe, Building2, Box, Layers, UserCheck } from 'lucide-react';
+import { Globe, Building2, Box, Layers, ShieldCheck } from 'lucide-react';
 import { ViewLevel } from '../../types/property';
 
 interface ViewLevelNavProps {
@@ -41,9 +41,9 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: 'ownership',
-    label: 'Ownership Details',
-    description: 'Unit cadastral title & 3D ULPIN registry',
-    icon: UserCheck
+    label: 'Property Intelligence',
+    description: 'Validation, Evidence & Cadastral Status',
+    icon: ShieldCheck
   }
 ];
 
@@ -52,7 +52,7 @@ export const ViewLevelNav: React.FC<ViewLevelNavProps> = ({
   onSelectLevel
 }) => {
   return (
-    <div className="flex flex-col space-y-2 pointer-events-auto w-48 sm:w-56">
+    <div className="flex flex-col space-y-1.5 pointer-events-auto w-48 sm:w-56">
       {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         const isActive = currentLevel === item.id;
@@ -61,32 +61,32 @@ export const ViewLevelNav: React.FC<ViewLevelNavProps> = ({
           <button
             key={item.id}
             onClick={() => onSelectLevel(item.id)}
-            className={`group relative flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-left transition-all duration-300 ${
+            className={`group relative flex items-center space-x-3 px-3 py-2 rounded-2xl text-left transition-all duration-200 border ${
               isActive
-                ? 'gis-glass-panel border-sky-400/80 bg-sky-950/60 shadow-glow-cyan text-white translate-x-1'
-                : 'bg-slate-900/60 hover:bg-slate-800/80 border border-sky-500/15 text-slate-300 hover:text-white hover:border-sky-500/30'
+                ? 'gis-glass-panel border-white/60 bg-white/10 text-white translate-x-1 shadow-sm'
+                : 'bg-black/60 hover:bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
             }`}
           >
-            {/* Active glowing pill indicator */}
+            {/* Active indicator bar */}
             {isActive && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-sky-400 rounded-r-full shadow-glow-cyan" />
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />
             )}
 
             <div
               className={`p-1.5 rounded-lg transition-colors ${
                 isActive
-                  ? 'bg-sky-500/30 text-sky-300'
-                  : 'bg-slate-800/80 text-slate-400 group-hover:text-sky-400'
+                  ? 'bg-white text-black'
+                  : 'bg-zinc-900 text-zinc-400 group-hover:text-white'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-3.5 h-3.5" />
             </div>
 
             <div className="flex flex-col overflow-hidden">
-              <span className="text-xs sm:text-sm font-semibold tracking-wide truncate">
+              <span className="text-xs font-semibold tracking-wide truncate text-white">
                 {item.label}
               </span>
-              <span className="text-[10px] text-slate-400 truncate group-hover:text-slate-300">
+              <span className="text-[10px] text-zinc-500 truncate group-hover:text-zinc-400 font-sans">
                 {item.description.split('(')[0]}
               </span>
             </div>

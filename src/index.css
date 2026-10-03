@@ -10,21 +10,21 @@
 
 /* Custom scrollbar for technical GIS panels */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(10, 10, 10, 0.8);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.3);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 189, 248, 0.6);
+  background: rgba(255, 255, 255, 0.4);
 }
 
 /* Cesium container adjustments */
@@ -32,7 +32,7 @@
   width: 100% !important;
   height: 100% !important;
   overflow: hidden !important;
-  background-color: #070b13 !important;
+  background-color: #000000 !important;
 }
 
 /* Hide default Cesium branding / buttons we don't want or replace with custom HUD */
@@ -49,24 +49,24 @@
   display: none !important;
 }
 
-/* Glassmorphism panel helper */
+/* Glassmorphism panel helper - Monochrome */
 .gis-glass-panel {
-  background: rgba(11, 19, 36, 0.82);
+  background: rgba(8, 8, 10, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(56, 189, 248, 0.22);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.65);
 }
 
 .gis-glass-card {
-  background: rgba(15, 26, 48, 0.65);
+  background: rgba(14, 14, 18, 0.75);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .gis-glass-card:hover {
-  border-color: rgba(56, 189, 248, 0.4);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 /* Radar pulse animation for GIS marker */
@@ -88,10 +88,10 @@
 /* Subtle glowing pulse */
 @keyframes glow-pulse {
   0%, 100% {
-    box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
   }
   50% {
-    box-shadow: 0 0 25px rgba(56, 189, 248, 0.8);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
   }
 }
 

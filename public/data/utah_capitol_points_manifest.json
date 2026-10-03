@@ -1,0 +1,21 @@
+{
+  "datasetId": "OTLAS.052008.32610.1",
+  "totalStreamPoints": 183116,
+  "buildingPoints": 133574,
+  "pointDensity": 19.82,
+  "centroidWgs84": [
+    -111.888218,
+    40.777409
+  ],
+  "centroidUtm": [
+    425048.33,
+    4514427.31
+  ],
+  "baseGroundElevation": 1384.5,
+  "domePeakElevation": 1458.57,
+  "derivedHeight": 74.07,
+  "binaryFile": "/data/utah_capitol_lidar_points.bin",
+  "recordSize": 24,
+  "elevationMin": 1377.07,
+  "elevationMax": 1458.57
+}

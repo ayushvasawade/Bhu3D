@@ -1,10 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
-import { Building2, Layers, Satellite, Map, Landmark, AlertCircle } from 'lucide-react';
+import { Building2, Layers, Satellite, Map, Landmark, AlertCircle, Box, CheckCircle2 } from 'lucide-react';
 import { PropertyRecord, ViewLevel } from '../../types/property';
 import { BuildingFootprint, Parcel } from '../../types/geospatial';
+import {
+  RealLidarBuilding,
+  LidarViewMode,
+  LidarCompareSubMode,
+  PointCloudRenderOptions,
+  LidarPointCloudData,
+  LidarCameraPreset
+} from '../../types/lidar';
+import { lidarService } from '../../services/lidarService';
 import { geospatialService } from '../../services/geospatialDataService';
 import { externalGeoService } from '../../services/externalGeoService';
+import { DataProvenanceBadge } from '../common/DataProvenanceBadge';
+
+import { LayerVisibilityState } from './LayerControlPanel';
 
 interface CesiumViewerProps {
   currentProperty: PropertyRecord;
@@ -12,6 +24,16 @@ interface CesiumViewerProps {
   selectedBuilding?: BuildingFootprint | null;
   onSelectBuilding?: (building: BuildingFootprint | null) => void;
   onCameraChange?: (telemetry: { latitude: number; longitude: number; altitude: number; heading: number }) => void;
+  isRealLidarMode?: boolean;
+  realLidarMetadata?: RealLidarBuilding | null;
+  cameraPreset?: LidarCameraPreset;
+  selectedRealBuilding?: RealLidarBuilding | null;
+  onSelectRealBuilding?: (building: RealLidarBuilding | null) => void;
+  layers?: LayerVisibilityState;
+  targetFlyLocation?: { latitude: number; longitude: number; altitude?: number } | null;
+  lidarViewMode?: LidarViewMode;
+  compareSubMode?: LidarCompareSubMode;
+  pointCloudOptions?: PointCloudRenderOptions;
 }
 
 type BasemapStyle = 'satellite' | 'dark' | 'streets' | 'bhuvan';
@@ -21,19 +43,49 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   viewLevel,
   selectedBuilding,
   onSelectBuilding,
-  onCameraChange
+  onCameraChange,
+  isRealLidarMode = true,
+  realLidarMetadata = null,
+  cameraPreset = 'overview',
+  selectedRealBuilding = null,
+  onSelectRealBuilding,
+  layers = {
+    lidar: true,
+    osmBuildings: true,
+    parcels: true,
+    satellite: true,
+    terrain: false,
+    propertyVolume: true,
+    validationZones: true
+  },
+  targetFlyLocation = null,
+  lidarViewMode = 'reconstruction',
+  compareSubMode = 'overlay',
+  pointCloudOptions = {
+    pointSize: 3,
+    colorMode: 'rgb',
+    densityPercentage: 100,
+    buildingOnly: true,
+    meshOpacity: 0.65
+  }
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const markerEntityRef = useRef<Cesium.Entity | null>(null);
+  const realBuildingEntityRef = useRef<Cesium.Entity | null>(null);
+  const realGroundMarkerRef = useRef<Cesium.Entity | null>(null);
+  const pointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
+  const cachedPointDataRef = useRef<LidarPointCloudData | null>(null);
   const buildingEntitiesRef = useRef<Cesium.Entity[]>([]);
   const parcelEntitiesRef = useRef<Cesium.Entity[]>([]);
   const currentBaseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
   const clickHandlerRef = useRef<Cesium.ScreenSpaceEventHandler | null>(null);
 
+
   const [basemap, setBasemap] = useState<BasemapStyle>('satellite');
   const [showBasemapMenu, setShowBasemapMenu] = useState(false);
   const [bhuvanAlert, setBhuvanAlert] = useState<string | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
 
   // Screen-projected callout position
   const [calloutScreenPos, setCalloutScreenPos] = useState<{ x: number; y: number; visible: boolean }>({
@@ -71,104 +123,141 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   // 1. Initialize Cesium Viewer
   useEffect(() => {
     if (!containerRef.current) return;
+    let removeCameraListener: (() => void) | undefined;
+    let removePostRenderListener: (() => void) | undefined;
 
-    const initialProvider = getImageryProvider('satellite');
-    const baseLayer = new Cesium.ImageryLayer(initialProvider);
-    currentBaseLayerRef.current = baseLayer;
+    try {
+      const initialProvider = getImageryProvider('satellite');
+      const baseLayer = new Cesium.ImageryLayer(initialProvider);
+      currentBaseLayerRef.current = baseLayer;
 
-    const viewer = new Cesium.Viewer(containerRef.current, {
-      baseLayer: baseLayer,
-      baseLayerPicker: false,
-      geocoder: false,
-      homeButton: false,
-      infoBox: false,
-      selectionIndicator: false,
-      timeline: false,
-      animation: false,
-      sceneModePicker: false,
-      navigationHelpButton: false,
-      fullscreenButton: false,
-      skyAtmosphere: new Cesium.SkyAtmosphere(),
-      skyBox: false,
-      contextOptions: {
-        webgl: {
-          alpha: true,
-          preserveDrawingBuffer: true
+      const viewer = new Cesium.Viewer(containerRef.current, {
+        baseLayer: baseLayer,
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: false,
+        infoBox: false,
+        selectionIndicator: false,
+        timeline: false,
+        animation: false,
+        sceneModePicker: false,
+        navigationHelpButton: false,
+        fullscreenButton: false,
+        skyAtmosphere: new Cesium.SkyAtmosphere(),
+        skyBox: false,
+        contextOptions: {
+          webgl: {
+            alpha: true,
+            preserveDrawingBuffer: true
+          }
         }
-      }
-    });
+      });
 
-    viewerRef.current = viewer;
+      viewerRef.current = viewer;
 
-    // Atmospheric and lighting configuration
-    viewer.scene.globe.enableLighting = true;
-    viewer.scene.globe.atmosphereLightIntensity = 10.0;
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#070b13');
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#0a1120');
+      // Atmospheric and lighting configuration
+      viewer.scene.globe.enableLighting = true;
+      viewer.scene.globe.atmosphereLightIntensity = 10.0;
+      viewer.scene.light = new Cesium.DirectionalLight({
+        direction: new Cesium.Cartesian3(-0.6, -0.6, -0.8)
+      });
+      viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#000000');
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#09090b');
 
-    // Camera move listener for live HUD telemetry
-    const removeCameraListener = viewer.camera.changed.addEventListener(() => {
-      const cartographic = viewer.camera.positionCartographic;
-      if (cartographic && onCameraChange) {
-        onCameraChange({
-          latitude: Cesium.Math.toDegrees(cartographic.latitude),
-          longitude: Cesium.Math.toDegrees(cartographic.longitude),
-          altitude: cartographic.height,
-          heading: Cesium.Math.toDegrees(viewer.camera.heading)
-        });
-      }
-    });
-
-    // Update screen callout position on postRender
-    const removePostRenderListener = viewer.scene.postRender.addEventListener(() => {
-      if (!markerEntityRef.current) return;
-      const pos = markerEntityRef.current.position?.getValue(viewer.clock.currentTime);
-      if (pos) {
-        const screenPos = Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene, pos);
-        if (screenPos) {
-          const isOccluded = Cesium.Cartesian3.distance(viewer.camera.position, pos) > 40000000;
-          setCalloutScreenPos({
-            x: screenPos.x,
-            y: screenPos.y,
-            visible: !isOccluded && screenPos.x >= 0 && screenPos.x <= window.innerWidth && screenPos.y >= 0 && screenPos.y <= window.innerHeight
+      // Camera move listener for live HUD telemetry
+      removeCameraListener = viewer.camera.changed.addEventListener(() => {
+        const cartographic = viewer.camera.positionCartographic;
+        if (cartographic && onCameraChange) {
+          onCameraChange({
+            latitude: Cesium.Math.toDegrees(cartographic.latitude),
+            longitude: Cesium.Math.toDegrees(cartographic.longitude),
+            altitude: cartographic.height,
+            heading: Cesium.Math.toDegrees(viewer.camera.heading)
           });
         }
-      }
-    });
+      });
 
-    // Initial Camera set to India global view
-    viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(78.9629, 20.5937, 18000000),
-      orientation: {
-        heading: 0,
-        pitch: Cesium.Math.toRadians(-90),
-        roll: 0
-      }
-    });
+      // Update screen callout position on postRender
+      removePostRenderListener = viewer.scene.postRender.addEventListener(() => {
+        const targetEntity = isRealLidarMode ? realBuildingEntityRef.current : markerEntityRef.current;
+        if (!targetEntity) return;
+        const pos = targetEntity.position?.getValue(viewer.clock.currentTime);
+        if (pos) {
+          const screenPos = Cesium.SceneTransforms.worldToWindowCoordinates(viewer.scene, pos);
+          if (screenPos) {
+            const isOccluded = Cesium.Cartesian3.distance(viewer.camera.position, pos) > 40000000;
+            setCalloutScreenPos({
+              x: screenPos.x,
+              y: screenPos.y,
+              visible: !isOccluded && screenPos.x >= 0 && screenPos.x <= window.innerWidth && screenPos.y >= 0 && screenPos.y <= window.innerHeight
+            });
+          }
+        }
+      });
 
-    // Click handler for 3D building picking
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-    handler.setInputAction((movement: any) => {
-      const pickedObject = viewer.scene.pick(movement.position);
-      if (Cesium.defined(pickedObject) && pickedObject.id && (pickedObject.id as any).buildingData) {
-        const building = (pickedObject.id as any).buildingData as BuildingFootprint;
-        onSelectBuilding?.(building);
+      // Initial Camera: In Real LiDAR mode, fly directly to Utah State Capitol!
+      if (isRealLidarMode) {
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromDegrees(-111.888200, 40.777394 - 0.0035, 380),
+          orientation: {
+            heading: Cesium.Math.toRadians(0),
+            pitch: Cesium.Math.toRadians(-32),
+            roll: 0
+          }
+        });
+      } else {
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromDegrees(78.9629, 20.5937, 18000000),
+          orientation: {
+            heading: 0,
+            pitch: Cesium.Math.toRadians(-90),
+            roll: 0
+          }
+        });
       }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-    clickHandlerRef.current = handler;
+      // Click handler for 3D building picking
+      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      handler.setInputAction((movement: any) => {
+        const pickedObject = viewer.scene.pick(movement.position);
+        if (Cesium.defined(pickedObject) && pickedObject.id) {
+          const entity = pickedObject.id;
+          if (
+            (entity as any).isRealLidarBuilding ||
+            entity.id === 'real-lidar-utah-capitol' ||
+            entity.id === 'real-lidar-ground-ring'
+          ) {
+            onSelectRealBuilding?.(realLidarMetadata || null);
+            return;
+          }
+          if ((entity as any).buildingData) {
+            const building = (entity as any).buildingData as BuildingFootprint;
+            onSelectBuilding?.(building);
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+      clickHandlerRef.current = handler;
+    } catch (err: any) {
+      console.error('[CesiumViewer] Failed to initialize Cesium Viewer:', err);
+      setInitError(err?.message || 'Cesium WebGL failed to initialize');
+    }
 
     return () => {
-      if (clickHandlerRef.current) {
+      if (clickHandlerRef.current && !clickHandlerRef.current.isDestroyed()) {
         clickHandlerRef.current.destroy();
         clickHandlerRef.current = null;
       }
-      removeCameraListener();
-      removePostRenderListener();
-      viewer.destroy();
+      removeCameraListener?.();
+      removePostRenderListener?.();
+      const currentViewer = viewerRef.current;
+      if (currentViewer && !currentViewer.isDestroyed()) {
+        currentViewer.destroy();
+      }
       viewerRef.current = null;
     };
   }, []);
+
 
   // 2. Update Basemap Layer when switched
   useEffect(() => {
@@ -217,26 +306,78 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [basemap]);
 
-  // 3. Load Real GeoJSON Footprints & Extrude 3D Building Volumes + Parcels
+  // 3. Load Real LiDAR Building or Conceptual Sandbox Layers
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    const { latitude, longitude } = currentProperty.coordinates;
-
-    // Clear old marker
+    // Clear old marker, buildings, parcels, real building entities, and point cloud primitives
+    if (pointPrimitivesRef.current && viewer && !viewer.isDestroyed()) {
+      viewer.scene.primitives.remove(pointPrimitivesRef.current);
+      pointPrimitivesRef.current = null;
+    }
     if (markerEntityRef.current) {
       viewer.entities.remove(markerEntityRef.current);
       markerEntityRef.current = null;
     }
-
-    // Clear old buildings and parcels
+    if (realBuildingEntityRef.current) {
+      viewer.entities.remove(realBuildingEntityRef.current);
+      realBuildingEntityRef.current = null;
+    }
+    if (realGroundMarkerRef.current) {
+      viewer.entities.remove(realGroundMarkerRef.current);
+      realGroundMarkerRef.current = null;
+    }
     buildingEntitiesRef.current.forEach((b) => viewer.entities.remove(b));
     buildingEntitiesRef.current = [];
     parcelEntitiesRef.current.forEach((p) => viewer.entities.remove(p));
     parcelEntitiesRef.current = [];
 
-    // Add Cadastral Marker Pin & Radar Ring
+    // REAL LIDAR MODE (Primary Active Showcase)
+    if (isRealLidarMode && realLidarMetadata) {
+      const { longitude, latitude } = realLidarMetadata.geographicLocation;
+      const bldPos = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
+
+      // Add Reconstructed Watertight GLB Model
+      const bldEntity = viewer.entities.add({
+        id: 'real-lidar-utah-capitol',
+        name: realLidarMetadata.buildingName,
+        position: bldPos,
+        model: {
+          uri: realLidarMetadata.reconstructionPipeline.outputModelFile,
+          minimumPixelSize: 64,
+          maximumScale: 20000,
+          shadows: Cesium.ShadowMode.ENABLED,
+          heightReference: Cesium.HeightReference.NONE
+        }
+      });
+      (bldEntity as any).isRealLidarBuilding = true;
+      (bldEntity as any).lidarData = realLidarMetadata;
+      realBuildingEntityRef.current = bldEntity;
+
+      // Add Ground Radar Ring around building precinct
+      const groundMarker = viewer.entities.add({
+        id: 'real-lidar-ground-ring',
+        name: 'Utah State Capitol Ground Datum (1,384.50m AMSL)',
+        position: Cesium.Cartesian3.fromDegrees(longitude, latitude, 1),
+        ellipse: {
+          semiMajorAxis: 160.0,
+          semiMinorAxis: 110.0,
+          height: 1,
+          material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.18),
+          outline: true,
+          outlineColor: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85),
+          outlineWidth: 2
+        }
+      });
+      realGroundMarkerRef.current = groundMarker;
+
+      return;
+    }
+
+    // SANDBOX MODE (Indian 3D Cadastre Concept)
+    let isCancelled = false;
+    const { latitude, longitude } = currentProperty.coordinates;
     const markerPos = Cesium.Cartesian3.fromDegrees(longitude, latitude, 5);
     const marker = viewer.entities.add({
       name: currentProperty.ownerName,
@@ -259,25 +400,17 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     });
     markerEntityRef.current = marker;
 
-    // Load Real Geospatial Data (Footprints & Parcels)
-    let isCancelled = false;
-
     const loadGeospatialLayers = async () => {
       const cityKey = currentProperty.city.toLowerCase() === 'pune' ? 'pune' : 'pune';
-
-      // A. Load Cadastral Parcels
       const parcels = await geospatialService.getParcelData(cityKey);
       if (isCancelled || !viewerRef.current || viewer.isDestroyed()) return;
 
       const parcelEntities: Cesium.Entity[] = [];
-
       parcels.forEach((parcel) => {
         const ring = parcel.geometry.coordinates[0];
         if (!ring || ring.length < 3) return;
-
         const flatCoords: number[] = [];
         ring.forEach(([lon, lat]: number[]) => flatCoords.push(lon, lat));
-
         const pEntity = viewer.entities.add({
           name: `Parcel ${parcel.surveyNumber}`,
           polygon: {
@@ -292,25 +425,19 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         (pEntity as any).parcelData = parcel;
         parcelEntities.push(pEntity);
       });
-
       parcelEntitiesRef.current = parcelEntities;
 
-      // B. Load OpenStreetMap 3D Extruded Building Volumes
       const buildings = await geospatialService.getBuildingFootprints(cityKey);
       if (isCancelled || !viewerRef.current || viewer.isDestroyed()) return;
 
       const buildingEntities: Cesium.Entity[] = [];
-
       buildings.forEach((bld) => {
         const ring = bld.geometry.type === 'MultiPolygon'
           ? (bld.geometry as any).coordinates[0]?.[0]
           : (bld.geometry as any).coordinates[0];
-
         if (!ring || ring.length < 3) return;
-
         const flatCoords: number[] = [];
         ring.forEach(([lon, lat]: number[]) => flatCoords.push(lon, lat));
-
         const isTarget = bld.associatedPropertyId === currentProperty.id || bld.id === 'BLD-PUN-00027';
         const isSelected = selectedBuilding?.id === bld.id;
 
@@ -334,28 +461,342 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
             outlineWidth: isTarget || isSelected ? 2 : 1
           }
         });
-
         (entity as any).buildingData = bld;
         buildingEntities.push(entity);
       });
-
       buildingEntitiesRef.current = buildingEntities;
     };
 
     loadGeospatialLayers();
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentProperty, selectedBuilding, isRealLidarMode, realLidarMetadata]);
+
+  // Helper: Topographic elevation colormap (Blue -> Cyan -> Green -> Yellow -> Red)
+  const getTopographicColor = (amsl: number, minZ = 1377.0, maxZ = 1459.0): Cesium.Color => {
+    const t = Math.max(0, Math.min(1, (amsl - minZ) / (maxZ - minZ)));
+    let r = 0, g = 0, b = 0;
+    if (t < 0.25) {
+      const s = t / 0.25;
+      r = 0;
+      g = Math.round(255 * s);
+      b = 255;
+    } else if (t < 0.5) {
+      const s = (t - 0.25) / 0.25;
+      r = 0;
+      g = 255;
+      b = Math.round(255 * (1 - s));
+    } else if (t < 0.75) {
+      const s = (t - 0.5) / 0.25;
+      r = Math.round(255 * s);
+      g = 255;
+      b = 0;
+    } else {
+      const s = (t - 0.75) / 0.25;
+      r = 255;
+      g = Math.round(255 * (1 - s));
+      b = 0;
+    }
+    return Cesium.Color.fromBytes(r, g, b, 255);
+  };
+
+  // 3b. Manage Real LiDAR Point Cloud & 3D Reconstructed Model Visibility by View Mode
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    // Update standard GIS layers
+    if (realGroundMarkerRef.current) {
+      realGroundMarkerRef.current.show = layers.validationZones;
+    }
+    buildingEntitiesRef.current.forEach((entity) => {
+      entity.show = layers.osmBuildings;
+    });
+    parcelEntitiesRef.current.forEach((entity) => {
+      entity.show = layers.parcels;
+    });
+
+    if (!isRealLidarMode || !realLidarMetadata) {
+      if (pointPrimitivesRef.current && !viewer.isDestroyed()) {
+        viewer.scene.primitives.remove(pointPrimitivesRef.current);
+        pointPrimitivesRef.current = null;
+      }
+      return;
+    }
+
+    const shouldShowPoints =
+      layers.lidar &&
+      (lidarViewMode === 'scan' ||
+        (lidarViewMode === 'compare' && (compareSubMode === 'overlay' || compareSubMode === 'lidar_only')));
+
+    const shouldShowMesh =
+      layers.lidar &&
+      (lidarViewMode === 'reconstruction' ||
+        (lidarViewMode === 'compare' && (compareSubMode === 'overlay' || compareSubMode === 'mesh_only')));
+
+    // Update Watertight 3D Reconstructed Mesh Entity
+    if (realBuildingEntityRef.current) {
+      realBuildingEntityRef.current.show = shouldShowMesh;
+      if (realBuildingEntityRef.current.model) {
+        if (
+          lidarViewMode === 'compare' &&
+          compareSubMode === 'overlay' &&
+          pointCloudOptions.meshOpacity < 0.99
+        ) {
+          (realBuildingEntityRef.current.model as any).color = Cesium.Color.WHITE.withAlpha(
+            pointCloudOptions.meshOpacity
+          );
+          (realBuildingEntityRef.current.model as any).colorBlendMode = Cesium.ColorBlendMode.MIX;
+          (realBuildingEntityRef.current.model as any).colorBlendAmount =
+            1.0 - pointCloudOptions.meshOpacity;
+        } else {
+          (realBuildingEntityRef.current.model as any).color = undefined;
+        }
+      }
+    }
+
+    // Update or Load Point Cloud Collection
+    if (!shouldShowPoints) {
+      if (pointPrimitivesRef.current) {
+        pointPrimitivesRef.current.show = false;
+      }
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadAndRenderPoints = async () => {
+      try {
+        let pointData = cachedPointDataRef.current;
+        if (!pointData) {
+          pointData = await lidarService.getPointCloudData();
+          cachedPointDataRef.current = pointData;
+        }
+        if (isCancelled || !viewerRef.current || viewer.isDestroyed()) return;
+
+        // Reset existing primitive collection if already exists
+        if (pointPrimitivesRef.current && !viewer.isDestroyed()) {
+          viewer.scene.primitives.remove(pointPrimitivesRef.current);
+          pointPrimitivesRef.current = null;
+        }
+
+        const pointCollection = new Cesium.PointPrimitiveCollection();
+        viewer.scene.primitives.add(pointCollection);
+        pointPrimitivesRef.current = pointCollection;
+
+        const { longitude, latitude } = realLidarMetadata.geographicLocation;
+        const centerCartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
+        const enuMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(centerCartesian);
+
+        const count = pointData.count;
+        const positions = pointData.positions;
+        const amslElevations = pointData.amslElevations;
+        const colorsRgb = pointData.colorsRgb;
+        const intensities = pointData.intensities;
+        const classifications = pointData.classifications;
+        const isBuilding = pointData.isBuilding;
+
+        const onlyBld = pointCloudOptions.buildingOnly;
+        const densityPct = pointCloudOptions.densityPercentage;
+        const colorMode = pointCloudOptions.colorMode;
+        const pixelSize = pointCloudOptions.pointSize;
+
+        for (let i = 0; i < count; i++) {
+          if (onlyBld && isBuilding[i] === 0) continue;
+          if (densityPct === 25 && i % 4 !== 0) continue;
+          if (densityPct === 50 && i % 2 !== 0) continue;
+          if (densityPct === 75 && i % 4 === 3) continue;
+
+          const lx = positions[i * 3];
+          const ly = positions[i * 3 + 1];
+          const lz = positions[i * 3 + 2];
+
+          // Transform local ENU coordinates to true world Cartesian3
+          const localPt = new Cesium.Cartesian3(lx, -lz, ly);
+          const worldPos = Cesium.Matrix4.multiplyByPoint(enuMatrix, localPt, new Cesium.Cartesian3());
+
+          let pointColor: Cesium.Color;
+          if (colorMode === 'rgb') {
+            pointColor = Cesium.Color.fromBytes(
+              colorsRgb[i * 3],
+              colorsRgb[i * 3 + 1],
+              colorsRgb[i * 3 + 2],
+              255
+            );
+          } else if (colorMode === 'elevation') {
+            pointColor = getTopographicColor(amslElevations[i]);
+          } else if (colorMode === 'classification') {
+            pointColor =
+              classifications[i] === 2
+                ? Cesium.Color.fromCssColorString('#64748b')
+                : Cesium.Color.fromCssColorString('#38bdf8');
+          } else {
+            const v = intensities[i];
+            pointColor = Cesium.Color.fromBytes(v, v, v, 255);
+          }
+
+          pointCollection.add({
+            position: worldPos,
+            color: pointColor,
+            pixelSize: pixelSize
+          });
+        }
+
+        pointCollection.show = true;
+      } catch (err) {
+        console.error('[CesiumViewer] Error loading point cloud primitives:', err);
+      }
+    };
+
+    loadAndRenderPoints();
 
     return () => {
       isCancelled = true;
     };
-  }, [currentProperty, selectedBuilding]);
+  }, [
+    isRealLidarMode,
+    realLidarMetadata,
+    lidarViewMode,
+    compareSubMode,
+    pointCloudOptions,
+    layers
+  ]);
 
-  // 4. Fly Camera when viewLevel or currentProperty changes
+  // Handle direct target fly requests from search selection
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !targetFlyLocation) return;
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(
+        targetFlyLocation.longitude,
+        targetFlyLocation.latitude - 0.002,
+        targetFlyLocation.altitude || 500
+      ),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-35),
+        roll: 0
+      },
+      duration: 1.8
+    });
+  }, [targetFlyLocation]);
+
+
+  // 4. Fly Camera when viewLevel, cameraPreset, or mode changes
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    const { latitude, longitude } = currentProperty.coordinates;
+    if (isRealLidarMode && realLidarMetadata) {
+      const { longitude, latitude } = realLidarMetadata.geographicLocation;
 
+      if (viewLevel === 'global') {
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, 14000000),
+          orientation: {
+            heading: 0,
+            pitch: Cesium.Math.toRadians(-90),
+            roll: 0
+          },
+          duration: 2.0
+        });
+        return;
+      }
+
+      if (viewLevel === 'city') {
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.06, 12000),
+          orientation: {
+            heading: Cesium.Math.toRadians(0),
+            pitch: Cesium.Math.toRadians(-55),
+            roll: 0
+          },
+          duration: 2.0
+        });
+        return;
+      }
+
+      // Detailed views by preset or level
+      switch (cameraPreset) {
+        case 'overview':
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0035, 380),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-32),
+              roll: 0
+            },
+            duration: 1.8
+          });
+          break;
+
+        case 'domeCloseUp':
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(longitude + 0.0008, latitude - 0.0012, 120),
+            orientation: {
+              heading: Cesium.Math.toRadians(330),
+              pitch: Cesium.Math.toRadians(-22),
+              roll: 0
+            },
+            duration: 1.8
+          });
+          break;
+
+        case 'grandSouthPortico':
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0018, 75),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-12),
+              roll: 0
+            },
+            duration: 1.8
+          });
+          break;
+
+        case 'aerialTopDown':
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, 520),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-90),
+              roll: 0
+            },
+            duration: 1.8
+          });
+          break;
+
+        case 'frontElevation':
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0022, 1420),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-5),
+              roll: 0
+            },
+            duration: 1.8
+          });
+          break;
+
+        case 'sideElevation':
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(longitude + 0.0022, latitude, 1420),
+            orientation: {
+              heading: Cesium.Math.toRadians(270),
+              pitch: Cesium.Math.toRadians(-5),
+              roll: 0
+            },
+            duration: 1.8
+          });
+          break;
+      }
+      return;
+    }
+
+    // Sandbox Indian mode camera
+    const { latitude, longitude } = currentProperty.coordinates;
     switch (viewLevel) {
       case 'global':
         viewer.camera.flyTo({
@@ -417,15 +858,33 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         });
         break;
     }
-  }, [viewLevel, currentProperty]);
+  }, [viewLevel, currentProperty, isRealLidarMode, realLidarMetadata, cameraPreset]);
+
+  if (initError) {
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-black text-white">
+        <div className="max-w-md p-6 rounded-2xl bg-zinc-950 border border-zinc-800 text-center shadow-2xl backdrop-blur-md">
+          <AlertCircle className="w-10 h-10 text-white mx-auto mb-3" />
+          <h3 className="text-sm font-bold text-white mb-1">3D Globe Renderer Notice</h3>
+          <p className="text-xs text-zinc-400 mb-4 font-mono">{initError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-white hover:bg-zinc-200 text-black font-semibold text-xs rounded-xl transition-all shadow-md active:scale-95"
+          >
+            Retry 3D Globe
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full">
       {/* Cesium Globe Container */}
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* Floating 3D Cadastral Callout Banner matching mockup */}
-      {calloutScreenPos.visible && !selectedBuilding && (
+      {/* Floating 3D Callout Banner */}
+      {calloutScreenPos.visible && !selectedBuilding && !selectedRealBuilding && (
         <div
           style={{
             left: `${calloutScreenPos.x}px`,
@@ -434,23 +893,38 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           }}
           className="absolute z-20 pointer-events-none transition-all duration-100 ease-out flex flex-col items-center"
         >
-          {/* Callout Card */}
-          <div className="gis-glass-panel px-3.5 py-2 rounded-2xl flex items-center space-x-2.5 shadow-2xl border border-sky-400/60 animate-fadeIn">
-            <div className="p-1.5 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30 shrink-0">
-              <Building2 className="w-4 h-4" />
+          {isRealLidarMode && realLidarMetadata ? (
+            <div
+              onClick={() => onSelectRealBuilding?.(realLidarMetadata)}
+              className="gis-glass-panel px-3.5 py-1.5 rounded-full flex items-center space-x-2 shadow-2xl border border-white/30 animate-fadeIn pointer-events-auto cursor-pointer hover:border-white transition-all bg-black/85 backdrop-blur-md"
+            >
+              <Box className="w-3.5 h-3.5 text-white shrink-0" />
+              <span className="text-xs font-bold text-white tracking-tight">{realLidarMetadata.buildingName}</span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800">
+                {realLidarMetadata.elevationMetrics.derivedBuildingHeightMeters}m
+              </span>
+              <DataProvenanceBadge status="REAL" label="REAL LiDAR" size="sm" />
             </div>
-            <div className="text-left">
-              <div className="text-[10px] text-slate-400 font-medium">Found property for</div>
-              <div className="text-xs font-bold text-white tracking-wide">{currentProperty.ownerName}</div>
-              <div className="text-[10px] text-sky-300">
-                {currentProperty.city}, {currentProperty.state}, {currentProperty.country}
+          ) : (
+            <div className="gis-glass-panel px-3.5 py-2 rounded-2xl flex items-center space-x-2.5 shadow-2xl border border-white/20 animate-fadeIn">
+              <div className="p-1.5 rounded-lg bg-zinc-900 text-white border border-zinc-700 shrink-0">
+                <Building2 className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <DataProvenanceBadge status={currentProperty.isLabDemo ? 'DEMO' : 'DERIVED'} size="sm" />
+                </div>
+                <div className="text-xs font-bold text-white tracking-wide">{currentProperty.propertyName || currentProperty.buildingName}</div>
+                <div className="text-[10px] text-zinc-400">
+                  {currentProperty.city}, {currentProperty.state}, {currentProperty.country}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Pointer line & indicator */}
-          <div className="w-0.5 h-6 bg-gradient-to-b from-sky-400 to-cyan-300 shadow-glow-cyan" />
-          <div className="w-3 h-3 rounded-full bg-cyan-400 border-2 border-white shadow-glow-cyan -mt-1 animate-ping" />
+          <div className="w-0.5 h-6 bg-gradient-to-b from-white to-zinc-500" />
+          <div className="w-2.5 h-2.5 rounded-full bg-white border border-black -mt-1 animate-ping" />
         </div>
       )}
 
@@ -460,14 +934,14 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           <button
             onClick={() => setShowBasemapMenu(!showBasemapMenu)}
             title="Switch Geospatial Basemap"
-            className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-sky-500/30 text-sky-400 shadow-lg backdrop-blur-md flex items-center gap-1.5 text-xs font-medium"
+            className="p-2.5 rounded-xl bg-zinc-950/90 hover:bg-zinc-900 border border-zinc-800 text-white shadow-lg backdrop-blur-md flex items-center gap-1.5 text-xs font-medium"
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="w-4 h-4 text-zinc-400" />
             <span className="capitalize">{basemap} Map</span>
           </button>
 
           {showBasemapMenu && (
-            <div className="absolute right-0 top-12 w-52 gis-glass-panel rounded-2xl p-2 shadow-2xl border border-sky-500/30 flex flex-col space-y-1 animate-fadeIn">
+            <div className="absolute right-0 top-12 w-52 gis-glass-panel rounded-2xl p-2 shadow-2xl border border-zinc-800 flex flex-col space-y-1 animate-fadeIn">
               <button
                 onClick={() => {
                   setBasemap('satellite');
@@ -475,11 +949,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
                 }}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                   basemap === 'satellite'
-                    ? 'bg-sky-500/30 text-sky-300 border border-sky-400/40'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    ? 'bg-white text-black font-semibold'
+                    : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
                 }`}
               >
-                <Satellite className="w-3.5 h-3.5 text-emerald-400" />
+                <Satellite className="w-3.5 h-3.5" />
                 <span>Satellite (ESRI)</span>
               </button>
 
@@ -490,11 +964,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
                 }}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                   basemap === 'bhuvan'
-                    ? 'bg-orange-500/30 text-orange-300 border border-orange-400/40'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    ? 'bg-white text-black font-semibold'
+                    : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
                 }`}
               >
-                <Landmark className="w-3.5 h-3.5 text-orange-400" />
+                <Landmark className="w-3.5 h-3.5" />
                 <span>Bhuvan / ISRO (WMS)</span>
               </button>
 
@@ -505,12 +979,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
                 }}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                   basemap === 'dark'
-                    ? 'bg-sky-500/30 text-sky-300 border border-sky-400/40'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    ? 'bg-white text-black font-semibold'
+                    : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5 text-sky-400" />
-                <span>Cyber Dark Cadastre</span>
+                <Layers className="w-3.5 h-3.5" />
+                <span>Monochrome Dark</span>
               </button>
 
               <button
@@ -520,11 +994,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
                 }}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                   basemap === 'streets'
-                    ? 'bg-sky-500/30 text-sky-300 border border-sky-400/40'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                    ? 'bg-white text-black font-semibold'
+                    : 'text-zinc-300 hover:bg-zinc-900 hover:text-white'
                 }`}
               >
-                <Map className="w-3.5 h-3.5 text-orange-400" />
+                <Map className="w-3.5 h-3.5" />
                 <span>OpenStreetMap</span>
               </button>
             </div>
@@ -535,17 +1009,17 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       {/* Bhuvan Connectivity / Error Alert Banner */}
       {bhuvanAlert && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto max-w-xl w-[90%] sm:w-auto">
-          <div className="gis-glass-panel px-4 py-2.5 rounded-2xl border border-amber-500/40 text-xs text-amber-200 flex items-start space-x-2.5 shadow-2xl animate-fadeIn">
-            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div className="gis-glass-panel px-4 py-2.5 rounded-2xl border border-zinc-700 bg-zinc-950 text-xs text-zinc-300 flex items-start space-x-2.5 shadow-2xl animate-fadeIn">
+            <AlertCircle className="w-4 h-4 text-white shrink-0 mt-0.5" />
             <div className="text-left font-mono">
-              <span className="font-bold text-amber-300 block">External WMS Service Notice</span>
-              <span className="text-[11px] text-slate-300 leading-snug block">
+              <span className="font-bold text-white block">External WMS Service Notice</span>
+              <span className="text-[11px] text-zinc-400 leading-snug block">
                 {bhuvanAlert}
               </span>
             </div>
             <button
               onClick={() => setBhuvanAlert(null)}
-              className="p-1 text-slate-400 hover:text-white ml-2 shrink-0"
+              className="p-1 text-zinc-400 hover:text-white ml-2 shrink-0"
             >
               ✕
             </button>

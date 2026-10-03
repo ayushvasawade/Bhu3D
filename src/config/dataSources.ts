@@ -58,14 +58,14 @@ export const DATA_SOURCE_REGISTRY: DataSourceMetadata[] = [
   },
   {
     id: 'lidar',
-    name: 'Drone LiDAR Point Cloud',
-    provider: 'Municipal Survey / Drone Survey Teams (Planned)',
-    purpose: 'Centimeter-Accurate LOD3 Rooflines & Overhangs',
-    dataType: 'LAS / LAZ Point Cloud / OGC 3D Tiles',
-    status: 'PLANNED',
-    attribution: 'Survey of India / PMC Urban Survey Drone Fleet',
-    description: 'Planned LiDAR point cloud ingestion for centimeter-accurate architectural rooflines and eaves heights.',
-    isOfficialGovt: true
+    name: 'OpenTopography LiDAR',
+    provider: 'OpenTopography / State of Utah / NSF',
+    purpose: 'Real Airborne Laser Scanning (LAS/LAZ) 3D Building Reconstruction',
+    dataType: 'LAS / LAZ Point Cloud (3.48M Points, EPSG:26912)',
+    status: 'CONNECTED',
+    attribution: 'OpenTopography / State of Utah (OTLAS.052008.32610.1)',
+    description: 'Active real-world LiDAR point-cloud dataset for Utah State Capitol. Reconstructed into georeferenced watertight 3D GLB model.',
+    isOfficialGovt: false
   },
   {
     id: 'naksha',
@@ -85,8 +85,8 @@ export const DATA_SOURCE_REGISTRY: DataSourceMetadata[] = [
     purpose: 'Unit-level Room Geometries & Vertical Slices',
     dataType: 'BIM IFC / CAD Vector Geometry (Demo)',
     status: 'DEMO',
-    attribution: 'Emerald Heights Architectural Sanction Drawing (Demo)',
-    description: 'Provides interior carpet area, unit bounding volume, and vertical floor slab dimensions.',
+    attribution: 'Bhu3D Concept Lab Architectural Model (Demo)',
+    description: 'Provides interior carpet area, unit bounding volume, and vertical floor slab dimensions for Demonstration Lab testing.',
     isOfficialGovt: false
   },
   {
@@ -94,10 +94,10 @@ export const DATA_SOURCE_REGISTRY: DataSourceMetadata[] = [
     name: 'Cadastral Ownership Database',
     provider: 'Land Revenue Title Records (Bhoomi / Mahabhulekh)',
     purpose: 'Legal Title Registration & Citizen Ownership Linkage',
-    dataType: 'Title Registry Records (Simulated)',
-    status: 'SIMULATED',
-    attribution: 'Simulated Cadastre Ownership Records (Prototype Research)',
-    description: 'Simulated ownership records linking verified citizen identities to 3D ULPIN identifiers for hackathon testing.',
+    dataType: 'State Land Revenue Registry (UNAVAILABLE)',
+    status: 'NOT_INTEGRATED',
+    attribution: 'State Land Records API (Not Connected)',
+    description: 'Official government land registry integration is UNAVAILABLE in this prototype. Live ownership and mutation records require authorized state government API access.',
     isOfficialGovt: true
   }
 ];

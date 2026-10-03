@@ -1,51 +1,143 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/layout/Navbar';
 import { FooterHUD } from './components/layout/FooterHUD';
 import { CesiumViewer } from './components/globe/CesiumViewer';
 import { BuildingInfoCard } from './components/globe/BuildingInfoCard';
 import { GeospatialPipelineStatusPanel } from './components/pipeline/GeospatialPipelineStatusPanel';
 import { SatelliteDataPanel } from './components/pipeline/SatelliteDataPanel';
-import { OwnerSearchCard } from './components/search/OwnerSearchCard';
+import { PropertySearchCard, SearchResultItem } from './components/search/PropertySearchCard';
 import { ViewLevelNav } from './components/search/ViewLevelNav';
-import { PropertyDetailsPanel } from './components/property/PropertyDetailsPanel';
+import { PropertyIntelligencePanel } from './components/property/PropertyIntelligencePanel';
+import { RealLidarControlCard } from './components/lidar/RealLidarControlCard';
+import { RealLidarBuildingCard } from './components/lidar/RealLidarBuildingCard';
+import { RealLidarProvenancePanel } from './components/lidar/RealLidarProvenancePanel';
+import { RealLidarSideBySideModal } from './components/lidar/RealLidarSideBySideModal';
+import { RealLidarMeshInspectorModal } from './components/lidar/RealLidarMeshInspectorModal';
+import { LayerControlPanel, LayerVisibilityState } from './components/globe/LayerControlPanel';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { PropertyPassportModal } from './components/modals/PropertyPassportModal';
 import { AboutModal } from './components/modals/AboutModal';
 import { HowItWorksModal } from './components/modals/HowItWorksModal';
 import { DataSourcesModal } from './components/modals/DataSourcesModal';
 import { Fullscreen3DModal } from './components/modals/Fullscreen3DModal';
 import { DEMO_PROPERTIES } from './data/demoProperties';
 import { PropertyRecord, ViewLevel, DataSourceItem } from './types/property';
-import { BuildingFootprint, PipelineStatus } from './types/geospatial';
+import { BuildingFootprint, Parcel, PipelineStatus } from './types/geospatial';
+import {
+  RealLidarBuilding,
+  LidarViewMode,
+  LidarCompareSubMode,
+  PointCloudRenderOptions,
+  LidarCameraPreset
+} from './types/lidar';
+import { PropertyPassportData, PrototypeRole } from './types/intelligence';
 import { geospatialService } from './services/geospatialDataService';
+import { realBuildingDataService } from './services/realBuildingDataService';
+import { copernicusService } from './services/copernicusService';
+import { intelligenceService } from './services/intelligenceService';
 
 export function App() {
+  // Mode selection: Real LiDAR Demonstration (Default & Primary) vs Conceptual Indian Cadastre Sandbox
+  const [isRealLidarMode, setIsRealLidarMode] = useState<boolean>(true);
+  const [realLidarMetadata, setRealLidarMetadata] = useState<RealLidarBuilding | null>(null);
+  const [selectedRealBuilding, setSelectedRealBuilding] = useState<RealLidarBuilding | null>(null);
+  const [cameraPreset, setCameraPreset] = useState<LidarCameraPreset>('overview');
+  const [isProvenancePanelOpen, setIsProvenancePanelOpen] = useState<boolean>(true);
+  const [isMeshInspectorOpen, setIsMeshInspectorOpen] = useState<boolean>(false);
+
+  // Real LiDAR Pipeline & Comparison States
+  const [lidarViewMode, setLidarViewMode] = useState<LidarViewMode>('reconstruction');
+  const [compareSubMode, setCompareSubMode] = useState<LidarCompareSubMode>('overlay');
+  const [pointCloudOptions, setPointCloudOptions] = useState<PointCloudRenderOptions>({
+    pointSize: 3,
+    colorMode: 'rgb',
+    densityPercentage: 100,
+    buildingOnly: true,
+    meshOpacity: 0.65
+  });
+  const [isSideBySideOpen, setIsSideBySideOpen] = useState<boolean>(false);
+
+  // Conceptual Cadastre Sandbox state
   const [properties] = useState<PropertyRecord[]>(DEMO_PROPERTIES);
   const [currentProperty, setCurrentProperty] = useState<PropertyRecord>(DEMO_PROPERTIES[0]);
-  const [viewLevel, setViewLevel] = useState<ViewLevel>('global');
+  const [viewLevel, setViewLevel] = useState<ViewLevel>('buildings');
   const [activeTab, setActiveTab] = useState<'explore' | 'about' | 'datasources' | 'howitworks'>('explore');
   const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Geospatial Pipeline & Selection
+  // Geospatial Pipeline & Real Datasets
+  const [allBuildings, setAllBuildings] = useState<BuildingFootprint[]>([]);
+  const [allParcels, setAllParcels] = useState<Parcel[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingFootprint | null>(null);
   const [pipelineStatus] = useState<PipelineStatus>(() => geospatialService.getPipelineStatus());
+  const [sentinelScene, setSentinelScene] = useState<any>(null);
+
+  // Layer Visibility State
+  const [layers, setLayers] = useState<LayerVisibilityState>({
+    lidar: true,
+    osmBuildings: true,
+    parcels: true,
+    satellite: true,
+    terrain: false,
+    propertyVolume: true,
+    validationZones: true
+  });
+  const [showLayerPanel, setShowLayerPanel] = useState<boolean>(false);
+
+  // Prototype Role State
+  const [currentRole, setCurrentRole] = useState<PrototypeRole>('survey_officer');
+
+  // Search Camera Target
+  const [targetFlyLocation, setTargetFlyLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    altitude?: number;
+  } | null>(null);
 
   // Modals state
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
   const [isDataSourcesOpen, setIsDataSourcesOpen] = useState(false);
   const [isFullscreen3DOpen, setIsFullscreen3DOpen] = useState(false);
+  const [passportModalData, setPassportModalData] = useState<PropertyPassportData | null>(null);
 
-  // Real-time HUD telemetry state
+  // Real-time HUD telemetry state (Defaults to Utah State Capitol coordinates)
   const [telemetry, setTelemetry] = useState({
-    latitude: 18.5204,
-    longitude: 73.8567,
-    altitude: 20000000,
+    latitude: 40.7774,
+    longitude: -111.8882,
+    altitude: 380,
     heading: 0
   });
+
+  // Load real LiDAR metadata & OSM data on initial mount
+  useEffect(() => {
+    realBuildingDataService.getRealBuilding()
+      .then((data) => {
+        setRealLidarMetadata(data);
+      })
+      .catch((err) => {
+        console.error('[App] Failed to load real LiDAR building data:', err);
+      });
+
+    // Ingest real OSM footprints & parcels
+    geospatialService.getBuildingFootprints('pune')
+      .then((blds) => setAllBuildings(blds))
+      .catch((err) => console.error('[App] Failed to load OSM buildings:', err));
+
+    geospatialService.getParcelData('pune')
+      .then((prcs) => setAllParcels(prcs))
+      .catch((err) => console.error('[App] Failed to load cadastral parcels:', err));
+
+    // Ingest Copernicus satellite scene
+    copernicusService.searchSentinel2({ tileId: 'T43QDA', limit: 1 })
+      .then((scenes) => {
+        if (scenes.length > 0) setSentinelScene(scenes[0]);
+      })
+      .catch((err) => console.warn('[App] Copernicus query:', err));
+  }, []);
 
   const handleSelectProperty = (property: PropertyRecord) => {
     setCurrentProperty(property);
     setSelectedBuilding(null);
-    // When a user selects a property, fly into city or buildings view
     setViewLevel('city');
   };
 
@@ -53,10 +145,11 @@ export function App() {
     setViewLevel(level);
     if (level === 'global' || level === 'city') {
       setSelectedBuilding(null);
+      setSelectedRealBuilding(null);
     }
   };
 
-  const handleSelectSource = (source: DataSourceItem) => {
+  const handleSelectSource = (_source: DataSourceItem) => {
     setIsDataSourcesOpen(true);
   };
 
@@ -73,6 +166,7 @@ export function App() {
     setSelectedBuilding(building);
     if (building) {
       setViewLevel('buildings');
+      setIsProvenancePanelOpen(true);
     }
   };
 
@@ -87,27 +181,97 @@ export function App() {
     setViewLevel('ownership');
   };
 
+  // Unified Search Selection Handler
+  const handleSearchResult = (result: SearchResultItem) => {
+    if (result.type === 'lidar') {
+      setIsRealLidarMode(true);
+      setSelectedBuilding(null);
+      setSelectedRealBuilding(realLidarMetadata);
+      setIsProvenancePanelOpen(true);
+      setCameraPreset('overview');
+      setTargetFlyLocation({
+        latitude: result.coordinates.latitude,
+        longitude: result.coordinates.longitude,
+        altitude: 380
+      });
+    } else if (result.type === 'osm_building') {
+      setIsRealLidarMode(false);
+      setSelectedRealBuilding(null);
+      const bld = result.rawData as BuildingFootprint;
+      setSelectedBuilding(bld);
+      setIsProvenancePanelOpen(true);
+      setViewLevel('buildings');
+      setTargetFlyLocation({
+        latitude: result.coordinates.latitude,
+        longitude: result.coordinates.longitude,
+        altitude: 450
+      });
+    } else if (result.type === 'parcel') {
+      setIsRealLidarMode(false);
+      setSelectedRealBuilding(null);
+      setViewLevel('layers');
+      setTargetFlyLocation({
+        latitude: result.coordinates.latitude,
+        longitude: result.coordinates.longitude,
+        altitude: 550
+      });
+    } else if (result.type === 'demo_lab') {
+      setIsRealLidarMode(false);
+      setSelectedRealBuilding(null);
+      const prop = result.rawData as PropertyRecord;
+      setCurrentProperty(prop);
+      setViewLevel('ownership');
+      setIsProvenancePanelOpen(true);
+      setTargetFlyLocation({
+        latitude: result.coordinates.latitude,
+        longitude: result.coordinates.longitude,
+        altitude: 320
+      });
+    }
+  };
+
+  const handleToggleLayer = (key: keyof LayerVisibilityState) => {
+    setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#070b13] text-slate-100 select-none">
+    <div className="relative w-screen h-screen overflow-hidden bg-black text-white select-none">
       {/* 1. Main Background: Fullscreen Interactive CesiumJS Globe */}
       <div className="absolute inset-0 z-0">
-        <CesiumViewer
-          currentProperty={currentProperty}
-          viewLevel={viewLevel}
-          selectedBuilding={selectedBuilding}
-          onSelectBuilding={handleBuildingClick}
-          onCameraChange={(cam) => {
-            setTelemetry({
-              latitude: cam.latitude,
-              longitude: cam.longitude,
-              altitude: cam.altitude,
-              heading: cam.heading
-            });
-          }}
-        />
+        <ErrorBoundary fallbackTitle="3D Globe Viewport Notice" fallbackMessage="Cesium WebGL rendering encountered a canvas initialization issue.">
+          <CesiumViewer
+            currentProperty={currentProperty}
+            viewLevel={viewLevel}
+            selectedBuilding={selectedBuilding}
+            onSelectBuilding={handleBuildingClick}
+            isRealLidarMode={isRealLidarMode}
+            realLidarMetadata={realLidarMetadata}
+            cameraPreset={cameraPreset}
+            selectedRealBuilding={selectedRealBuilding}
+            onSelectRealBuilding={(bld) => {
+              setSelectedRealBuilding(bld);
+              if (bld) {
+                setIsProvenancePanelOpen(true);
+              }
+            }}
+            onCameraChange={(cam) => {
+              setTelemetry({
+                latitude: cam.latitude,
+                longitude: cam.longitude,
+                altitude: cam.altitude,
+                heading: cam.heading
+              });
+            }}
+            layers={layers}
+            targetFlyLocation={targetFlyLocation}
+            lidarViewMode={lidarViewMode}
+            compareSubMode={compareSubMode}
+            pointCloudOptions={pointCloudOptions}
+          />
+        </ErrorBoundary>
       </div>
 
-      {/* 2. Top Header Navigation Bar */}
+      {/* 2. Top Header Navigation Bar with Role Selector */}
       <Navbar
         activeTab={activeTab}
         onTabChange={(tab) => {
@@ -123,24 +287,177 @@ export function App() {
         onOpenAbout={() => setIsAboutOpen(true)}
         onOpenHowItWorks={() => setIsHowItWorksOpen(true)}
         onOpenDataSources={() => setIsDataSourcesOpen(true)}
+        currentRole={currentRole}
+        onSelectRole={setCurrentRole}
       />
 
-      {/* 3. Floating Left Sidebar: Search & 5-Step Vertical Cadastre Navigation */}
-      <aside aria-label="Cadastre Navigation" className="absolute top-20 left-5 z-20 flex flex-col space-y-3 pointer-events-none">
-        <OwnerSearchCard
-          currentProperty={currentProperty}
-          properties={properties}
-          onSelectProperty={handleSelectProperty}
+      {/* 2b. Floating Mode Navigation Bar for Utah State Capitol Real LiDAR */}
+      {isRealLidarMode && (
+        <div className="absolute top-[72px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto hidden md:flex items-center gap-1 p-1 rounded-2xl bg-zinc-950/95 border border-zinc-800 backdrop-blur-xl shadow-2xl animate-fadeIn">
+          <button
+            onClick={() => setLidarViewMode('scan')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              lidarViewMode === 'scan'
+                ? 'bg-white text-black shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
+            <span>SCAN</span>
+            <span
+              className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
+                lidarViewMode === 'scan' ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-400'
+              }`}
+            >
+              REAL
+            </span>
+          </button>
+
+          <button
+            onClick={() => setLidarViewMode('reconstruction')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              lidarViewMode === 'reconstruction'
+                ? 'bg-white text-black shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
+            <span>3D MESH</span>
+            <span
+              className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
+                lidarViewMode === 'reconstruction' ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-400'
+              }`}
+            >
+              DERIVED
+            </span>
+          </button>
+
+          <button
+            onClick={() => setLidarViewMode('compare')}
+            className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              lidarViewMode === 'compare'
+                ? 'bg-white text-black shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+            <span>COMPARE</span>
+            <span
+              className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
+                lidarViewMode === 'compare' ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-400'
+              }`}
+            >
+              AUDIT
+            </span>
+          </button>
+
+          <div className="w-px h-3.5 bg-zinc-800 my-auto mx-0.5" />
+
+          <button
+            onClick={() => setIsMeshInspectorOpen(true)}
+            className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800/80 whitespace-nowrap"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+            <span>INSPECTOR &amp; QC</span>
+            <span className="text-[9px] px-1 py-0.2 rounded font-semibold bg-zinc-800 text-zinc-400">
+              METRICS
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* 3. Floating Left Sidebar: Mode Switcher, Real Search, Telemetry & Layer Control */}
+      <aside
+        aria-label="LiDAR and Cadastre Navigation"
+        className="absolute top-20 left-4 bottom-24 z-20 flex flex-col space-y-2 pointer-events-none w-72 sm:w-80 max-w-[325px] max-h-[calc(100vh-11.5rem)] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1"
+      >
+        {/* Mode & Camera Controls */}
+        <RealLidarControlCard
+          metadata={realLidarMetadata}
+          isRealLidarMode={isRealLidarMode}
+          onToggleMode={(mode) => {
+            setIsRealLidarMode(mode);
+            setSelectedRealBuilding(null);
+            setSelectedBuilding(null);
+            if (mode) {
+              setIsProvenancePanelOpen(true);
+              setCameraPreset('overview');
+            }
+          }}
+          cameraPreset={cameraPreset}
+          onSelectCameraPreset={(preset) => {
+            setCameraPreset(preset);
+            if (viewLevel !== 'buildings') {
+              setViewLevel('buildings');
+            }
+          }}
+          onOpenProvenance={() => setIsProvenancePanelOpen(!isProvenancePanelOpen)}
+          lidarViewMode={lidarViewMode}
+          onChangeViewMode={setLidarViewMode}
+          compareSubMode={compareSubMode}
+          onChangeCompareSubMode={setCompareSubMode}
+          pointCloudOptions={pointCloudOptions}
+          onChangePointCloudOptions={(opts) =>
+            setPointCloudOptions((prev) => ({ ...prev, ...opts }))
+          }
+          onOpenSideBySide={() => setIsSideBySideOpen(true)}
+          onOpenInspector={() => setIsMeshInspectorOpen(true)}
+          onResetCamera={() => setCameraPreset('overview')}
         />
 
+        {/* Real Geospatial Building & Property Search */}
+        <PropertySearchCard
+          buildings={allBuildings}
+          parcels={allParcels}
+          properties={properties}
+          realLidarMetadata={realLidarMetadata}
+          isRealLidarMode={isRealLidarMode}
+          onSelectResult={handleSearchResult}
+        />
+
+        {/* View Level Breadcrumb Navigation */}
         <ViewLevelNav
           currentLevel={viewLevel}
           onSelectLevel={handleLevelSelect}
         />
+
+        {/* Layer Controls Toggle Button */}
+        <div className="pointer-events-auto">
+          <button
+            onClick={() => setShowLayerPanel(!showLayerPanel)}
+            className="w-full py-2 px-3 rounded-xl bg-zinc-950/90 hover:bg-zinc-900 border border-zinc-800 text-xs font-semibold text-white flex items-center justify-between transition-colors shadow-lg"
+          >
+            <span>Geospatial Layer Controls</span>
+            <span className="text-[10px] font-mono text-zinc-400">
+              {showLayerPanel ? 'Hide ▲' : 'Show ▼'}
+            </span>
+          </button>
+          {showLayerPanel && (
+            <div className="mt-2 animate-fadeIn">
+              <LayerControlPanel
+                layers={layers}
+                onToggleLayer={handleToggleLayer}
+                isRealLidarMode={isRealLidarMode}
+              />
+            </div>
+          )}
+        </div>
       </aside>
 
-      {/* 4. Clicked Building Information Card */}
-      {selectedBuilding && (
+      {/* 4. Clicked Real LiDAR Building Information Card */}
+      {selectedRealBuilding && isRealLidarMode && (
+        <RealLidarBuildingCard
+          metadata={selectedRealBuilding}
+          onClose={() => setSelectedRealBuilding(null)}
+          onOpenProvenance={() => {
+            setSelectedRealBuilding(null);
+            setIsProvenancePanelOpen(true);
+          }}
+        />
+      )}
+
+      {/* 4b. Clicked Sandbox Building Information Card */}
+      {selectedBuilding && !isRealLidarMode && (
         <BuildingInfoCard
           building={selectedBuilding}
           onClose={() => setSelectedBuilding(null)}
@@ -148,23 +465,39 @@ export function App() {
         />
       )}
 
-      {/* 5. Floating Right Sidebar: Property Information & 3D Apartment Preview */}
-      <aside aria-label="Property Information" className="absolute top-20 right-5 z-20 pointer-events-none">
-        <PropertyDetailsPanel
-          property={currentProperty}
-          onOpenFullscreen3D={() => setIsFullscreen3DOpen(true)}
-          onSelectSource={handleSelectSource}
-          onBack={() => {
-            if (viewLevel !== 'global') {
-              setViewLevel('global');
-              setSelectedBuilding(null);
-            }
-          }}
-        />
+      {/* 5. Floating Right Sidebar: Real LiDAR Provenance or Cadastre Intelligence */}
+      <aside
+        aria-label="Property and Provenance Information"
+        className="absolute top-20 right-4 bottom-24 z-20 pointer-events-none w-72 sm:w-80 md:w-92 max-w-[370px] max-h-[calc(100vh-11.5rem)] flex flex-col"
+      >
+        {isProvenancePanelOpen && (
+          isRealLidarMode ? (
+            <RealLidarProvenancePanel
+              metadata={realLidarMetadata}
+              onCameraPreset={setCameraPreset}
+              activeCameraPreset={cameraPreset}
+              onClose={() => setIsProvenancePanelOpen(false)}
+              onOpenSideBySide={() => setIsSideBySideOpen(true)}
+              onOpenInspector={() => setIsMeshInspectorOpen(true)}
+            />
+          ) : (
+            <PropertyIntelligencePanel
+              building={selectedBuilding}
+              realLidarMetadata={realLidarMetadata}
+              isRealLidarMode={isRealLidarMode}
+              property={currentProperty}
+              parcel={allParcels[0] || null}
+              sentinelScene={sentinelScene}
+              onClose={() => setIsProvenancePanelOpen(false)}
+              onOpenPassport={(passport) => setPassportModalData(passport)}
+              onOpenFullscreen3D={() => setIsFullscreen3DOpen(true)}
+            />
+          )
+        )}
       </aside>
 
       {/* 6. Geospatial Pipeline Processing Status Panel & Satellite Telemetry */}
-      <div className="absolute top-20 right-[445px] z-20 hidden xl:flex flex-col items-end space-y-2 pointer-events-none">
+      <div className="absolute top-20 right-[465px] z-20 hidden 2xl:flex flex-col items-end space-y-2 pointer-events-none">
         <GeospatialPipelineStatusPanel status={pipelineStatus} />
         <SatelliteDataPanel />
       </div>
@@ -181,7 +514,7 @@ export function App() {
         heading={telemetry.heading}
       />
 
-      {/* 8. Informational Modals */}
+      {/* 8. Informational & Verification Modals */}
       <AboutModal
         isOpen={isAboutOpen}
         onClose={() => {
@@ -211,8 +544,49 @@ export function App() {
         onClose={() => setIsFullscreen3DOpen(false)}
         property={currentProperty}
       />
+
+      {/* Property Passport & QR Verification Modal */}
+      {passportModalData && (
+        <PropertyPassportModal
+          isOpen={!!passportModalData}
+          onClose={() => setPassportModalData(null)}
+          passport={passportModalData}
+          onExportGeoJson={() => {
+            if (selectedBuilding) {
+              const jsonStr = intelligenceService.exportGeoJson(
+                selectedBuilding,
+                passportModalData.validation,
+                passportModalData.confidence
+              );
+              const blob = new Blob([jsonStr], { type: 'application/geo+json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `Bhu3D_${selectedBuilding.id}_passport.geojson`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }
+          }}
+        />
+      )}
+      {/* 9. Dual-Viewport Synchronized Side-by-Side Verification Modal */}
+      <RealLidarSideBySideModal
+        isOpen={isSideBySideOpen}
+        onClose={() => setIsSideBySideOpen(false)}
+        metadata={realLidarMetadata}
+      />
+
+      {/* 10. LiDAR -> Mesh Quality & Validation Inspector Modal */}
+      <RealLidarMeshInspectorModal
+        isOpen={isMeshInspectorOpen}
+        onClose={() => setIsMeshInspectorOpen(false)}
+        metadata={realLidarMetadata}
+      />
     </div>
   );
 }
 
 export default App;
+
