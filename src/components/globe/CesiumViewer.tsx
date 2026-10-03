@@ -12,7 +12,8 @@ import {
   LidarCameraPreset,
   LidarDatasetId,
   LABuildingRecord,
-  LADatasetMetadata
+  LADatasetMetadata,
+  FloorInspectionOptions
 } from '../../types/lidar';
 import { lidarService } from '../../services/lidarService';
 import { geospatialService } from '../../services/geospatialDataService';
@@ -37,6 +38,7 @@ interface CesiumViewerProps {
   selectedLABuilding?: LABuildingRecord | null;
   onSelectLABuilding?: (building: LABuildingRecord | null) => void;
   selectedFloor?: number | null;
+  floorInspectionOptions?: FloorInspectionOptions;
   layers?: LayerVisibilityState;
   targetFlyLocation?: { latitude: number; longitude: number; altitude?: number } | null;
   lidarViewMode?: LidarViewMode;
@@ -45,6 +47,19 @@ interface CesiumViewerProps {
 }
 
 type BasemapStyle = 'satellite' | 'dark' | 'streets' | 'bhuvan';
+
+function isPointInPolygon(lon: number, lat: number, polygon: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0];
+    const yi = polygon[i][1];
+    const xj = polygon[j][0];
+    const yj = polygon[j][1];
+    const intersect = yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
 
 export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   currentProperty,
@@ -62,6 +77,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   selectedLABuilding = null,
   onSelectLABuilding,
   selectedFloor = null,
+  floorInspectionOptions = {
+    isInspectionMode: false,
+    isExplodedView: false,
+    explodeSpacingMeters: 4.0,
+    floorHeightAssumption: 3.5
+  },
   layers = {
     lidar: true,
     osmBuildings: true,
@@ -78,7 +99,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     pointSize: 3,
     colorMode: 'rgb',
     densityPercentage: 100,
-    buildingOnly: true,
+    buildingOnly: false,
     meshOpacity: 0.65
   }
 }) => {
@@ -89,10 +110,21 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   const realGroundMarkerRef = useRef<Cesium.Entity | null>(null);
   const floorEntitiesRef = useRef<Cesium.Entity[]>([]);
   const pointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
+  const highlightPointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
   const cachedPointDataRef = useRef<LidarPointCloudData | null>(null);
   const cachedLAPointDataRef = useRef<LidarPointCloudData | null>(null);
   const laMetadataRef = useRef<LADatasetMetadata | null>(laMetadata);
   laMetadataRef.current = laMetadata;
+  const activeDatasetRef = useRef(activeDataset);
+  activeDatasetRef.current = activeDataset;
+  const onSelectLABuildingRef = useRef(onSelectLABuilding);
+  onSelectLABuildingRef.current = onSelectLABuilding;
+  const onSelectRealBuildingRef = useRef(onSelectRealBuilding);
+  onSelectRealBuildingRef.current = onSelectRealBuilding;
+  const onSelectBuildingRef = useRef(onSelectBuilding);
+  onSelectBuildingRef.current = onSelectBuilding;
+  const realLidarMetadataRef = useRef(realLidarMetadata);
+  realLidarMetadataRef.current = realLidarMetadata;
   const buildingEntitiesRef = useRef<Cesium.Entity[]>([]);
   const parcelEntitiesRef = useRef<Cesium.Entity[]>([]);
   const currentBaseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
@@ -263,28 +295,53 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       // Click handler for 3D building picking
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
       handler.setInputAction((movement: any) => {
-        // If in LA mode, pick nearest building to click position
-        if (activeDataset === 'la_south_park' && laMetadataRef.current?.buildings) {
+        const curActiveDataset = activeDatasetRef.current;
+        const curLaMeta = laMetadataRef.current;
+
+        // If in LA mode, pick building by exact 3D surface or footprint polygon
+        if (curActiveDataset === 'la_south_park' && curLaMeta?.buildings) {
           const ray = viewer.camera.getPickRay(movement.position);
-          if (ray) {
-            const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
-            if (cartesian) {
-              const carto = Cesium.Cartographic.fromCartesian(cartesian);
-              const clickLon = Cesium.Math.toDegrees(carto.longitude);
-              const clickLat = Cesium.Math.toDegrees(carto.latitude);
-              let bestBld: LABuildingRecord | null = null;
-              let minD = Infinity;
-              for (const b of laMetadataRef.current.buildings) {
-                const d = Math.hypot(b.center.longitude - clickLon, b.center.latitude - clickLat);
-                if (d < minD) {
-                  minD = d;
-                  bestBld = b;
-                }
-              }
-              if (bestBld && minD < 0.0015) {
-                onSelectLABuilding?.(bestBld);
+          let cartesian: Cesium.Cartesian3 | undefined;
+          if (viewer.scene.pickPositionSupported) {
+            try {
+              cartesian = viewer.scene.pickPosition(movement.position);
+            } catch {
+              // fallback
+            }
+          }
+          if (!cartesian && ray) {
+            cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+          }
+          if (!cartesian) {
+            cartesian = viewer.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
+          }
+
+          if (cartesian) {
+            const carto = Cesium.Cartographic.fromCartesian(cartesian);
+            const clickLon = Cesium.Math.toDegrees(carto.longitude);
+            const clickLat = Cesium.Math.toDegrees(carto.latitude);
+
+            // 1. Exact point-in-polygon containment
+            for (const b of curLaMeta.buildings) {
+              if (b.footprintCoordinates && isPointInPolygon(clickLon, clickLat, b.footprintCoordinates)) {
+                onSelectLABuildingRef.current?.(b);
                 return;
               }
+            }
+
+            // 2. Proximity check fallback (within ~80 meters)
+            let bestBld: LABuildingRecord | null = null;
+            let minD = Infinity;
+            for (const b of curLaMeta.buildings) {
+              const d = Math.hypot(b.center.longitude - clickLon, b.center.latitude - clickLat);
+              if (d < minD) {
+                minD = d;
+                bestBld = b;
+              }
+            }
+            if (bestBld && minD < 0.0008) {
+              onSelectLABuildingRef.current?.(bestBld);
+              return;
             }
           }
         }
@@ -292,23 +349,21 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         const pickedObject = viewer.scene.pick(movement.position);
         if (Cesium.defined(pickedObject) && pickedObject.id) {
           const entity = pickedObject.id;
+          if ((entity as any).laBuildingData) {
+            onSelectLABuildingRef.current?.((entity as any).laBuildingData);
+            return;
+          }
           if (
             (entity as any).isRealLidarBuilding ||
             entity.id === 'real-lidar-utah-capitol' ||
-            entity.id === 'real-lidar-ground-ring' ||
-            entity.id === 'real-lidar-la-buildings' ||
-            entity.id === 'real-lidar-la-ground-ring'
+            entity.id === 'real-lidar-ground-ring'
           ) {
-            if (activeDataset === 'la_south_park' && laMetadataRef.current?.buildings?.[0]) {
-              onSelectLABuilding?.(laMetadataRef.current.buildings[0]);
-            } else {
-              onSelectRealBuilding?.(realLidarMetadata || null);
-            }
+            onSelectRealBuildingRef.current?.(realLidarMetadataRef.current || null);
             return;
           }
           if ((entity as any).buildingData) {
             const building = (entity as any).buildingData as BuildingFootprint;
-            onSelectBuilding?.(building);
+            onSelectBuildingRef.current?.(building);
           }
         }
       }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -388,6 +443,10 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     if (!viewer) return;
 
     // Clear old marker, buildings, parcels, real building entities, and point cloud primitives
+    if (highlightPointPrimitivesRef.current && viewer && !viewer.isDestroyed()) {
+      viewer.scene.primitives.remove(highlightPointPrimitivesRef.current);
+      highlightPointPrimitivesRef.current = null;
+    }
     if (pointPrimitivesRef.current && viewer && !viewer.isDestroyed()) {
       viewer.scene.primitives.remove(pointPrimitivesRef.current);
       pointPrimitivesRef.current = null;
@@ -449,12 +508,41 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         });
         realGroundMarkerRef.current = groundMarker;
 
+        // Add 2D building footprint outlines for all 129 buildings when layers.osmBuildings is on or in COMPARE mode
+        if (laMetadata?.buildings && (layers.osmBuildings || lidarViewMode === 'compare')) {
+          const laFootprintEntities: Cesium.Entity[] = [];
+          for (const b of laMetadata.buildings) {
+            if (!b.footprintCoordinates || b.footprintCoordinates.length < 3) continue;
+            const coords = b.footprintCoordinates;
+            const positions = Cesium.Cartesian3.fromDegreesArrayHeights(
+              coords.map(([lon, lat]) => [lon, lat, b.localGroundAMSL + 0.15]).flat()
+            );
+
+            const isCompare = lidarViewMode === 'compare';
+            const footprintEntity = viewer.entities.add({
+              id: `la-osm-footprint-${b.id}`,
+              name: `${b.name} Footprint`,
+              polyline: {
+                positions,
+                width: isCompare ? 2.5 : 1.5,
+                material: isCompare
+                  ? Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.9)
+                  : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.45)
+              }
+            });
+            (footprintEntity as any).laBuildingData = b;
+            laFootprintEntities.push(footprintEntity);
+          }
+          buildingEntitiesRef.current = laFootprintEntities;
+        }
+
         return;
       }
 
       if (realLidarMetadata) {
         const { longitude, latitude } = realLidarMetadata.geographicLocation;
-        const bldPos = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
+        const bldGroundAlt = realLidarMetadata.elevationMetrics.baseGroundElevationMeters || 1384.5;
+        const bldPos = Cesium.Cartesian3.fromDegrees(longitude, latitude, bldGroundAlt);
 
         // Add Reconstructed Watertight GLB Model
         const bldEntity = viewer.entities.add({
@@ -476,12 +564,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         // Add Ground Radar Ring around building precinct
         const groundMarker = viewer.entities.add({
           id: 'real-lidar-ground-ring',
-          name: 'Utah State Capitol Ground Datum (1,384.50m AMSL)',
-          position: Cesium.Cartesian3.fromDegrees(longitude, latitude, 1),
+          name: `Utah State Capitol Ground Datum (${bldGroundAlt.toFixed(2)}m AMSL)`,
+          position: Cesium.Cartesian3.fromDegrees(longitude, latitude, bldGroundAlt + 1),
           ellipse: {
             semiMajorAxis: 160.0,
             semiMinorAxis: 110.0,
-            height: 1,
+            height: bldGroundAlt + 1,
             material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.18),
             outline: true,
             outlineColor: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85),
@@ -587,9 +675,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     };
 
     loadGeospatialLayers();
-  }, [currentProperty, selectedBuilding, isRealLidarMode, activeDataset, realLidarMetadata]);
+  }, [currentProperty, selectedBuilding, isRealLidarMode, activeDataset, realLidarMetadata, laMetadata, layers.osmBuildings, lidarViewMode]);
 
-  // 3c. Manage Selected LA Building Footprint & Inferred Floor Slices
+  // 3c. Manage Selected LA Building Footprint, Structural Slabs, & Inferred Floor Volumes
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
@@ -605,55 +693,178 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     if (!coords || coords.length < 3) return;
 
     const flatDegrees: number[] = [];
+    let minLon = Number.POSITIVE_INFINITY, maxLon = Number.NEGATIVE_INFINITY;
+    let minLat = Number.POSITIVE_INFINITY, maxLat = Number.NEGATIVE_INFINITY;
     coords.forEach(([lon, lat]) => {
       flatDegrees.push(lon, lat);
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
     });
 
-    // 1. Ground Footprint Outline Ring
+    const isCompare = lidarViewMode === 'compare';
+    const isInspection = !!floorInspectionOptions?.isInspectionMode;
+    const isExploded = !!floorInspectionOptions?.isExplodedView;
+    const explodeSpacing = floorInspectionOptions?.explodeSpacingMeters ?? 4.0;
+    const floorH = floorInspectionOptions?.floorHeightAssumption ?? 3.5;
+
+    const groundZ = selectedLABuilding.localGroundAMSL;
+    const roofZ = selectedLABuilding.mainRoofAMSL || selectedLABuilding.peakElevationAMSL;
+    const bldHeight = Math.max(2.5, roofZ - groundZ);
+    const computedFloors = Math.max(1, Math.round(bldHeight / floorH));
+    const actualFloorHeight = bldHeight / computedFloors;
+
+    // 1. 2D Ground Footprint Outline Ring
     const groundOutline = viewer.entities.add({
       id: `la-bld-${selectedLABuilding.id}-ground-outline`,
-      name: `${selectedLABuilding.name} Footprint Base`,
+      name: `${selectedLABuilding.name} OSM Footprint Outline`,
       polyline: {
         positions: Cesium.Cartesian3.fromDegreesArrayHeights(
-          coords.map(([lon, lat]) => [lon, lat, selectedLABuilding.localGroundAMSL + 0.3]).flat()
+          coords.map(([lon, lat]) => [lon, lat, groundZ + 0.25]).flat()
         ),
-        width: 3.5,
-        material: Cesium.Color.fromCssColorString('#00f2fe')
+        width: isCompare ? 3.5 : 2.5,
+        material: isCompare
+          ? Cesium.Color.fromCssColorString('#f59e0b')
+          : Cesium.Color.fromCssColorString('#00f2fe')
       }
     });
     newFloorEntities.push(groundOutline);
 
-    // 2. Inferred Floor Slices:
-    // If selectedFloor is specified, highlight that floor with prominent cyan fill & white edge
-    // Otherwise render all inferred floors as subtle translucent strata
-    selectedLABuilding.levels.forEach((lvl) => {
+    // 2. 2D Ground Footprint Fill
+    const groundFill = viewer.entities.add({
+      id: `la-bld-${selectedLABuilding.id}-ground-fill`,
+      name: `${selectedLABuilding.name} Footprint Base Polygon`,
+      polygon: {
+        hierarchy: Cesium.Cartesian3.fromDegreesArray(flatDegrees),
+        height: groundZ + 0.1,
+        material: isCompare
+          ? Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.25)
+          : Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.20)
+      }
+    });
+    newFloorEntities.push(groundFill);
+
+    // 2b. In COMPARE Mode: Add LiDAR XY Extent Bounding Box in vibrant Emerald
+    if (isCompare) {
+      const pad = 0.00002;
+      const lidarBoxEntity = viewer.entities.add({
+        id: `la-bld-${selectedLABuilding.id}-lidar-extent`,
+        name: `${selectedLABuilding.name} LiDAR XY Extent (${selectedLABuilding.pointCount} pts)`,
+        polyline: {
+          positions: Cesium.Cartesian3.fromDegreesArrayHeights(
+            [
+              [minLon - pad, minLat - pad, groundZ + 0.4],
+              [maxLon + pad, minLat - pad, groundZ + 0.4],
+              [maxLon + pad, maxLat + pad, groundZ + 0.4],
+              [minLon - pad, maxLat + pad, groundZ + 0.4],
+              [minLon - pad, minLat - pad, groundZ + 0.4]
+            ].flat()
+          ),
+          width: 2.5,
+          material: Cesium.Color.fromCssColorString('#10b981')
+        }
+      });
+      newFloorEntities.push(lidarBoxEntity);
+    }
+
+    // 3. Highlight Perimeter Wireframe if NOT in inspection mode
+    if (!isInspection) {
+      const perimeterWireframe = viewer.entities.add({
+        id: `la-bld-${selectedLABuilding.id}-roof-perimeter`,
+        name: `${selectedLABuilding.name} Parapet Perimeter Highlight`,
+        polyline: {
+          positions: Cesium.Cartesian3.fromDegreesArrayHeights(
+            coords.map(([lon, lat]) => [lon, lat, roofZ + 0.2]).flat()
+          ),
+          width: 2.0,
+          material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85)
+        }
+      });
+      newFloorEntities.push(perimeterWireframe);
+    }
+
+    // 4. Inferred Structural Floor Slabs & Interior Volumes (Requirements D & E)
+    for (let fl = 1; fl <= computedFloors; fl++) {
+      const flBaseZ = groundZ + (fl - 1) * actualFloorHeight;
+      const flTopZ = fl === computedFloors ? roofZ : groundZ + fl * actualFloorHeight;
+      const flSpan = flTopZ - flBaseZ;
+      const zOffset = isExploded ? (fl - 1) * explodeSpacing : 0;
+
       const isTargetFloor = selectedFloor !== null && selectedFloor !== undefined
-        ? lvl.level === selectedFloor
+        ? fl === selectedFloor
         : false;
 
-      const floorColor = isTargetFloor
-        ? Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.65)
-        : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.12);
+      // Slab thickness (realistic concrete plate: 0.30m)
+      const slabThickness = Math.min(0.32, flSpan * 0.12);
+      // Ceiling gap (realistic clearance: 0.20m below upper slab)
+      const ceilingGap = Math.min(0.20, flSpan * 0.08);
 
-      const outlineColor = isTargetFloor
-        ? Cesium.Color.WHITE
-        : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.4);
-
-      const floorEntity = viewer.entities.add({
-        id: `la-bld-${selectedLABuilding.id}-floor-${lvl.level}`,
-        name: `${lvl.floorName} (Inferred: ${lvl.zMinAMSL.toFixed(1)}m - ${lvl.zMaxAMSL.toFixed(1)}m AMSL)`,
+      // A. Structural Floor Plate / Slab
+      const slabEntity = viewer.entities.add({
+        id: `la-bld-${selectedLABuilding.id}-slab-${fl}`,
+        name: `Floor ${fl} Structural Slab [INFERRED] (${(flBaseZ + zOffset).toFixed(1)}m AMSL)`,
         polygon: {
           hierarchy: Cesium.Cartesian3.fromDegreesArray(flatDegrees),
-          height: lvl.zMinAMSL,
-          extrudedHeight: lvl.zMaxAMSL,
-          material: floorColor,
+          height: flBaseZ + zOffset,
+          extrudedHeight: flBaseZ + zOffset + slabThickness,
+          material: isTargetFloor
+            ? Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.95)
+            : Cesium.Color.fromCssColorString('#0284c7').withAlpha(isInspection ? 0.70 : 0.40),
           outline: true,
-          outlineColor: outlineColor,
+          outlineColor: isTargetFloor
+            ? Cesium.Color.WHITE
+            : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.6),
           outlineWidth: isTargetFloor ? 3 : 1
         }
       });
-      newFloorEntities.push(floorEntity);
-    });
+      newFloorEntities.push(slabEntity);
+
+      // B. Usable Interior Floor Volume
+      const volumeEntity = viewer.entities.add({
+        id: `la-bld-${selectedLABuilding.id}-volume-${fl}`,
+        name: `Floor ${fl} Inferred Usable Volume (${(flBaseZ + zOffset + slabThickness).toFixed(1)}m - ${(flTopZ + zOffset - ceilingGap).toFixed(1)}m AMSL)`,
+        polygon: {
+          hierarchy: Cesium.Cartesian3.fromDegreesArray(flatDegrees),
+          height: flBaseZ + zOffset + slabThickness,
+          extrudedHeight: flTopZ + zOffset - ceilingGap,
+          material: isTargetFloor
+            ? Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.45)
+            : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(isInspection ? 0.18 : 0.06),
+          outline: true,
+          outlineColor: isTargetFloor
+            ? Cesium.Color.WHITE
+            : Cesium.Color.fromCssColorString('#38bdf8').withAlpha(isInspection ? 0.4 : 0.15),
+          outlineWidth: isTargetFloor ? 2 : 1
+        }
+      });
+      newFloorEntities.push(volumeEntity);
+
+      // C. Floating 3D Text Label in Exploded View
+      if (isExploded) {
+        const labelEntity = viewer.entities.add({
+          id: `la-bld-${selectedLABuilding.id}-label-${fl}`,
+          position: Cesium.Cartesian3.fromDegrees(
+            selectedLABuilding.center.longitude,
+            selectedLABuilding.center.latitude,
+            flBaseZ + zOffset + flSpan * 0.5
+          ),
+          label: {
+            text: `FL ${fl} [INFERRED]\n${flBaseZ.toFixed(1)}m - ${flTopZ.toFixed(1)}m AMSL (Δh=${flSpan.toFixed(1)}m)`,
+            font: 'bold 11px monospace',
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            fillColor: isTargetFloor ? Cesium.Color.WHITE : Cesium.Color.fromCssColorString('#38bdf8'),
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+            pixelOffset: new Cesium.Cartesian2(45, 0),
+            disableDepthTestDistance: Number.POSITIVE_INFINITY
+          }
+        });
+        newFloorEntities.push(labelEntity);
+      }
+    }
 
     floorEntitiesRef.current = newFloorEntities;
 
@@ -663,7 +874,92 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       }
       floorEntitiesRef.current = [];
     };
-  }, [activeDataset, selectedLABuilding, selectedFloor]);
+  }, [activeDataset, selectedLABuilding, selectedFloor, floorInspectionOptions, lidarViewMode]);
+
+  // 3d. Highlight Real LiDAR Points for the Selected LA Building
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    if (highlightPointPrimitivesRef.current && !viewer.isDestroyed()) {
+      viewer.scene.primitives.remove(highlightPointPrimitivesRef.current);
+      highlightPointPrimitivesRef.current = null;
+    }
+
+    if (
+      activeDataset !== 'la_south_park' ||
+      !selectedLABuilding ||
+      !cachedLAPointDataRef.current ||
+      !selectedLABuilding.buildingIndex
+    ) {
+      return;
+    }
+
+    const pointData = cachedLAPointDataRef.current;
+    const bIndices = pointData.buildingIndices;
+    if (!bIndices) return;
+
+    const centerCartesian = Cesium.Cartesian3.fromDegrees(
+      pointData.centerLon || -118.260903,
+      pointData.centerLat || 34.037095,
+      pointData.centerAlt || 72.17
+    );
+    const enuMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(centerCartesian);
+
+    const highlightCollection = new Cesium.PointPrimitiveCollection();
+    viewer.scene.primitives.add(highlightCollection);
+    highlightPointPrimitivesRef.current = highlightCollection;
+
+    const targetBIdx = selectedLABuilding.buildingIndex;
+    const count = pointData.count;
+    const positions = pointData.positions;
+    const amslElevations = pointData.amslElevations;
+    const basePixelSize = (pointCloudOptions.pointSize || 3) + 3;
+
+    // Check if a specific floor is selected
+    const targetFloorObj = selectedFloor
+      ? selectedLABuilding.levels.find((l) => l.level === selectedFloor)
+      : null;
+
+    for (let i = 0; i < count; i++) {
+      if (bIndices[i] === targetBIdx) {
+        const dx = positions[i * 3];
+        const dy = positions[i * 3 + 1];
+        const dz = positions[i * 3 + 2];
+        const amsl = amslElevations[i];
+
+        const localPt = new Cesium.Cartesian3(dx, dy, dz);
+        const worldPos = Cesium.Matrix4.multiplyByPoint(enuMatrix, localPt, new Cesium.Cartesian3());
+
+        let color = Cesium.Color.fromCssColorString('#00f2fe');
+        let pSize = basePixelSize;
+
+        if (targetFloorObj) {
+          if (amsl >= targetFloorObj.zMinAMSL && amsl <= targetFloorObj.zMaxAMSL) {
+            color = Cesium.Color.WHITE;
+            pSize = basePixelSize + 2;
+          } else {
+            color = Cesium.Color.fromCssColorString('#0284c7').withAlpha(0.65);
+          }
+        }
+
+        highlightCollection.add({
+          position: worldPos,
+          color,
+          pixelSize: pSize
+        });
+      }
+    }
+
+    highlightCollection.show = true;
+
+    return () => {
+      if (viewer && !viewer.isDestroyed() && highlightPointPrimitivesRef.current) {
+        viewer.scene.primitives.remove(highlightPointPrimitivesRef.current);
+        highlightPointPrimitivesRef.current = null;
+      }
+    };
+  }, [activeDataset, selectedLABuilding, selectedFloor, pointCloudOptions.pointSize]);
 
   // Helper: Topographic elevation colormap (Blue -> Cyan -> Green -> Yellow -> Red)
   const getTopographicColor = (amsl: number, minZ = 1377.0, maxZ = 1459.0): Cesium.Color => {
@@ -703,7 +999,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       realGroundMarkerRef.current.show = layers.validationZones;
     }
     buildingEntitiesRef.current.forEach((entity) => {
-      entity.show = layers.osmBuildings;
+      entity.show = layers.osmBuildings || lidarViewMode === 'compare';
     });
     parcelEntitiesRef.current.forEach((entity) => {
       entity.show = layers.parcels;
@@ -731,7 +1027,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     if (realBuildingEntityRef.current) {
       realBuildingEntityRef.current.show = shouldShowMesh;
       if (realBuildingEntityRef.current.model) {
-        if (
+        if (floorInspectionOptions?.isInspectionMode) {
+          (realBuildingEntityRef.current.model as any).color = Cesium.Color.WHITE.withAlpha(0.12);
+          (realBuildingEntityRef.current.model as any).colorBlendMode = Cesium.ColorBlendMode.MIX;
+          (realBuildingEntityRef.current.model as any).colorBlendAmount = 0.88;
+        } else if (
           lidarViewMode === 'compare' &&
           compareSubMode === 'overlay' &&
           pointCloudOptions.meshOpacity < 0.99
@@ -878,6 +1178,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     lidarViewMode,
     compareSubMode,
     pointCloudOptions,
+    floorInspectionOptions,
     layers
   ]);
 

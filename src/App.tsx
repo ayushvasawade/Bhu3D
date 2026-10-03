@@ -35,7 +35,8 @@ import {
   LidarCameraPreset,
   LidarDatasetId,
   LABuildingRecord,
-  LADatasetMetadata
+  LADatasetMetadata,
+  FloorInspectionOptions
 } from './types/lidar';
 import { PropertyPassportData, PrototypeRole } from './types/intelligence';
 import { geospatialService } from './services/geospatialDataService';
@@ -64,10 +65,18 @@ export function App() {
     pointSize: 3,
     colorMode: 'rgb',
     densityPercentage: 100,
-    buildingOnly: true,
+    buildingOnly: false,
     meshOpacity: 0.65
   });
   const [isSideBySideOpen, setIsSideBySideOpen] = useState<boolean>(false);
+
+  // 3D Floor Inspection & Exploded View Options
+  const [floorInspectionOptions, setFloorInspectionOptions] = useState<FloorInspectionOptions>({
+    isInspectionMode: false,
+    isExplodedView: false,
+    explodeSpacingMeters: 4.0,
+    floorHeightAssumption: 3.5
+  });
 
   // Conceptual Cadastre Sandbox state
   const [properties] = useState<PropertyRecord[]>(DEMO_PROPERTIES);
@@ -300,6 +309,7 @@ export function App() {
               setIsProvenancePanelOpen(true);
             }}
             selectedFloor={selectedFloor}
+            floorInspectionOptions={floorInspectionOptions}
             onCameraChange={(cam) => {
               setTelemetry({
                 latitude: cam.latitude,
@@ -589,6 +599,10 @@ export function App() {
                   }}
                   selectedFloor={selectedFloor}
                   onSelectFloor={setSelectedFloor}
+                  floorInspectionOptions={floorInspectionOptions}
+                  onChangeFloorInspectionOptions={(opts) =>
+                    setFloorInspectionOptions((prev) => ({ ...prev, ...opts }))
+                  }
                 />
               ) : (
                 <div className="gis-glass-panel rounded-3xl p-5 border border-zinc-800 shadow-2xl pointer-events-auto backdrop-blur-xl text-white">

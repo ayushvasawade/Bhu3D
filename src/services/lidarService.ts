@@ -212,6 +212,7 @@ class LidarService {
         const intensities = new Uint8Array(count);
         const classifications = new Uint8Array(count);
         const isBuilding = new Uint8Array(count);
+        const buildingIndices = new Uint8Array(count);
 
         let buildingCount = 0;
 
@@ -225,7 +226,7 @@ class LidarService {
           const intensity = dataView.getUint8(offset + 16);
           const cls = dataView.getUint8(offset + 17);
           const isBld = dataView.getUint8(offset + 18);
-          // offset + 19 is building_idx
+          const bldIdx = dataView.getUint8(offset + 19);
 
           positions[i * 3] = dx;
           positions[i * 3 + 1] = dy;
@@ -235,6 +236,7 @@ class LidarService {
           intensities[i] = intensity;
           classifications[i] = cls;
           isBuilding[i] = isBld;
+          buildingIndices[i] = bldIdx;
 
           if (isBld === 1) {
             buildingCount++;
@@ -273,6 +275,7 @@ class LidarService {
           intensities,
           classifications,
           isBuilding,
+          buildingIndices,
           centerLon,
           centerLat,
           centerAlt

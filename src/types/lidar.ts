@@ -123,12 +123,20 @@ export interface LidarPointCloudData {
   intensities: Uint8Array;
   classifications: Uint8Array;
   isBuilding: Uint8Array;
+  buildingIndices?: Uint8Array; // uint8 building index matching LABuildingRecord.buildingIndex
   centerLon?: number;
   centerLat?: number;
   centerAlt?: number;
 }
 
 export type LidarDatasetId = 'la_south_park' | 'utah_capitol';
+
+export interface FloorInspectionOptions {
+  isInspectionMode: boolean; // hide roof/ghost exterior
+  isExplodedView: boolean; // separate floors vertically
+  explodeSpacingMeters: number; // 2.0 to 6.0m
+  floorHeightAssumption: number; // 3.0, 3.5, 4.0m
+}
 
 export interface LABuildingLevel {
   level: number;
@@ -141,12 +149,14 @@ export interface LABuildingLevel {
 export interface LABuildingRecord {
   id: string;
   osmWayId: number;
+  buildingIndex?: number;
   name: string;
   buildingType: string;
   footprintAreaSqM: number;
   pointCount: number;
   localGroundAMSL: number;
   peakElevationAMSL: number;
+  mainRoofAMSL?: number;
   derivedHeightMeters: number;
   tagHeight: number | null;
   tagLevels: number | null;

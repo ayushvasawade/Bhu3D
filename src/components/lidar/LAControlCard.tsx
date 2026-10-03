@@ -239,8 +239,8 @@ export const LAControlCard: React.FC<LAControlCardProps> = ({
           }}
           className="w-full bg-black text-white text-[11px] font-mono p-2 rounded-xl border border-zinc-800 hover:border-zinc-700 focus:outline-none focus:border-white transition-colors"
         >
-          <option value="">-- Choose a Building to Inspect --</option>
-          {buildings.slice(0, 40).map((b) => (
+          <option value="">-- Choose a Building to Inspect ({buildings.length}) --</option>
+          {buildings.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name} ({b.derivedHeightMeters}m · {b.inferredFloors} lvls)
             </option>
