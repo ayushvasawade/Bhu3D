@@ -25,13 +25,13 @@ export function App() {
   const [selectedBuilding, setSelectedBuilding] = useState<LABuildingRecord | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
 
-  // Default Layer Visibility (Phase 7 Requirements)
-  // Satellite ✓, LiDAR ✓, OSM ✓, 3D Mesh ✗, YOLO ✗, Validation ✗, Floor Volumes ✗
+  // Default Layer Visibility (3D Construction Active by Default)
+  // Satellite ✓, LiDAR ✓, OSM ✓, 3D Mesh (Reconstruction) ✓, YOLO ✗, Validation ✗, Floor Volumes ✗
   const [layers, setLayers] = useState<LayerVisibilityState>({
     satellite: true,
     lidar: true,
     osm: true,
-    reconstruction: false,
+    reconstruction: true,
     yolo: false,
     validation: false,
     floorVolumes: false,
@@ -62,7 +62,65 @@ export function App() {
   // Vertical Placement Audit Debug Panel Toggle
   const [isDebugPanelOpen, setIsDebugPanelOpen] = useState<boolean>(false);
 
+  // Camera & Navigation Mode: Initial is 'global' (Earth 3D Globe)
+  const [cameraMode, setCameraMode] = useState<'global' | 'precinct'>('global');
+
   const cesiumViewerRef = useRef<Cesium.Viewer | null>(null);
+
+  // Camera Flight Handlers
+  const handleFlyToGlobal = () => {
+    setCameraMode('global');
+    setSelectedBuilding(null);
+    setSelectedFloor(null);
+    if (cesiumViewerRef.current && !cesiumViewerRef.current.isDestroyed()) {
+      cesiumViewerRef.current.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(-118.260903, 34.037095, 20000000),
+        orientation: {
+          heading: 0,
+          pitch: Cesium.Math.toRadians(-90),
+          roll: 0
+        },
+        duration: 2.2,
+        easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT
+      });
+    }
+  };
+
+  const handleFlyToPrecinct = (preset: 'overview' | 'street' | 'ortho' = 'overview') => {
+    setCameraMode('precinct');
+    if (cesiumViewerRef.current && !cesiumViewerRef.current.isDestroyed()) {
+      const centerLon = -118.260903;
+      const centerLat = 34.037095;
+      const groundAlt = layers.terrain ? 35.70 : 0.0;
+      let dest = Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0055, groundAlt + 420);
+      let orientation = {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-35),
+        roll: 0
+      };
+      if (preset === 'street') {
+        dest = Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0012, groundAlt + 85);
+        orientation = {
+          heading: Cesium.Math.toRadians(15),
+          pitch: Cesium.Math.toRadians(-12),
+          roll: 0
+        };
+      } else if (preset === 'ortho') {
+        dest = Cesium.Cartesian3.fromDegrees(centerLon, centerLat, groundAlt + 650);
+        orientation = {
+          heading: Cesium.Math.toRadians(0),
+          pitch: Cesium.Math.toRadians(-89.9),
+          roll: 0
+        };
+      }
+      cesiumViewerRef.current.camera.flyTo({
+        destination: dest,
+        orientation,
+        duration: 2.5,
+        easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT
+      });
+    }
+  };
 
   // Load Real USGS 3DEP LiDAR Dataset on Initial Mount
   useEffect(() => {
@@ -155,6 +213,9 @@ export function App() {
         <Navbar
           isDarkMode={isDarkMode}
           onToggleTheme={() => setIsDarkMode(!isDarkMode)}
+          cameraMode={cameraMode}
+          onFlyToGlobal={handleFlyToGlobal}
+          onFlyToPrecinct={() => handleFlyToPrecinct('overview')}
         />
 
         {/* Center: Cesium 3D Globe Viewer */}
@@ -162,7 +223,10 @@ export function App() {
           <CesiumViewer
             laMetadata={laMetadata}
             selectedBuilding={selectedBuilding}
-            onSelectBuilding={setSelectedBuilding}
+            onSelectBuilding={(bld) => {
+              setSelectedBuilding(bld);
+              if (bld) setCameraMode('precinct');
+            }}
             selectedFloor={selectedFloor}
             floorInspectionOptions={floorInspectionOptions}
             layers={layers}
@@ -171,33 +235,44 @@ export function App() {
             onViewerReady={(v) => { cesiumViewerRef.current = v; }}
             isDebugPanelOpen={isDebugPanelOpen}
             onCloseDebugPanel={() => setIsDebugPanelOpen(false)}
+            cameraMode={cameraMode}
+            onCameraModeChange={setCameraMode}
+            onFlyToGlobal={handleFlyToGlobal}
+            onFlyToPrecinct={handleFlyToPrecinct}
           />
         </main>
 
         {/* Left Sidebar: DATA, ANALYSIS, CADASTRE (Phase 7 Design) */}
-        <div className="absolute top-18 left-5 z-20 pointer-events-auto">
+        <div className="absolute top-20 left-5 z-20 pointer-events-auto">
           <LeftSidebar
             layers={layers}
             onToggleLayer={handleToggleLayer}
             buildings={laMetadata?.buildings || []}
             selectedBuilding={selectedBuilding}
-            onSelectBuilding={setSelectedBuilding}
+            onSelectBuilding={(bld) => {
+              setSelectedBuilding(bld);
+              if (bld) setCameraMode('precinct');
+            }}
             onToggleDebugPanel={() => setIsDebugPanelOpen(!isDebugPanelOpen)}
             isDebugPanelOpen={isDebugPanelOpen}
             onRunYolo={handleRunYoloSegmentation}
             isYoloRunning={isYoloRunning}
+            cameraMode={cameraMode}
+            onFlyToGlobal={handleFlyToGlobal}
+            onFlyToPrecinct={() => handleFlyToPrecinct('overview')}
           />
         </div>
 
         {/* Right Sidebar: Contextual Building Inspector (ONLY SHOWN WHEN SELECTED) */}
         {selectedBuilding && (
-          <div className="absolute top-18 right-5 z-20 pointer-events-auto animate-fadeIn">
+          <div className="absolute top-20 right-5 z-20 pointer-events-auto animate-fadeIn">
             <LABuildingCard
               building={selectedBuilding}
               onClose={() => {
                 setSelectedBuilding(null);
                 setSelectedFloor(null);
               }}
+              onFlyToGlobal={handleFlyToGlobal}
               onFocusBuilding={(bld) => {
                 if (cesiumViewerRef.current) {
                   const ground = layers.terrain ? 35.70 : 0.0;

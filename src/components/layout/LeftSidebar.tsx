@@ -10,7 +10,9 @@ import {
   Scan,
   Compass,
   CheckCircle2,
-  Ruler
+  Ruler,
+  Globe2,
+  Maximize2
 } from 'lucide-react';
 import { LABuildingRecord } from '../../types/lidar';
 
@@ -35,6 +37,9 @@ interface LeftSidebarProps {
   isDebugPanelOpen: boolean;
   onRunYolo?: () => void;
   isYoloRunning?: boolean;
+  cameraMode?: 'global' | 'precinct';
+  onFlyToGlobal?: () => void;
+  onFlyToPrecinct?: () => void;
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -46,10 +51,42 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   onToggleDebugPanel,
   isDebugPanelOpen,
   onRunYolo,
-  isYoloRunning = false
+  isYoloRunning = false,
+  cameraMode = 'global',
+  onFlyToGlobal,
+  onFlyToPrecinct
 }) => {
   return (
     <aside className="gis-glass-panel rounded-3xl p-4 w-72 sm:w-80 shadow-2xl pointer-events-auto border border-zinc-800 transition-all duration-300 flex flex-col gap-4 select-none max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
+      {/* Return to 3D Globe Quick Action */}
+      <div className="pb-3 border-b border-zinc-800">
+        {cameraMode === 'precinct' ? (
+          <button
+            onClick={onFlyToGlobal}
+            className="w-full py-2.5 px-3 rounded-2xl bg-zinc-900/90 hover:bg-zinc-800 text-white border border-zinc-700 hover:border-cyan-400 font-mono text-xs font-bold flex items-center justify-between transition-all group shadow-md"
+            title="Return to Planetary 3D Earth Globe"
+          >
+            <span className="flex items-center gap-2">
+              <Globe2 className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span>← Back to 3D Globe</span>
+            </span>
+            <span className="text-[10px] text-zinc-400 font-normal">Orbit Earth</span>
+          </button>
+        ) : (
+          <button
+            onClick={onFlyToPrecinct}
+            className="w-full py-2.5 px-3 rounded-2xl bg-white hover:bg-zinc-200 text-black border border-white font-mono text-xs font-bold flex items-center justify-between transition-all shadow-lg group"
+            title="Descend into Downtown LA 3D Construction"
+          >
+            <span className="flex items-center gap-2">
+              <Maximize2 className="w-4 h-4 text-black group-hover:scale-110 transition-transform" />
+              <span>Fly to 3D Construction</span>
+            </span>
+            <span className="text-[10px] bg-black text-white px-2 py-0.5 rounded-full font-normal">128 Meshes</span>
+          </button>
+        )}
+      </div>
+
       {/* Header / Dataset Scope */}
       <div className="pb-3 border-b border-zinc-800">
         <div className="flex items-center justify-between mb-1">

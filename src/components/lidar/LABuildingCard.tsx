@@ -14,7 +14,8 @@ import {
   Split,
   Sparkles,
   Scan,
-  Database
+  Database,
+  Globe2
 } from 'lucide-react';
 import { LABuildingRecord, FloorInspectionOptions } from '../../types/lidar';
 import { DataProvenanceBadge } from '../common/DataProvenanceBadge';
@@ -23,6 +24,7 @@ interface LABuildingCardProps {
   building: LABuildingRecord | null;
   onClose: () => void;
   onFocusBuilding?: (building: LABuildingRecord) => void;
+  onFlyToGlobal?: () => void;
   selectedFloor?: number | null;
   onSelectFloor?: (floor: number | null) => void;
   floorInspectionOptions?: FloorInspectionOptions;
@@ -33,6 +35,7 @@ export const LABuildingCard: React.FC<LABuildingCardProps> = ({
   building,
   onClose,
   onFocusBuilding,
+  onFlyToGlobal,
   selectedFloor = null,
   onSelectFloor,
   floorInspectionOptions = {
@@ -92,13 +95,25 @@ export const LABuildingCard: React.FC<LABuildingCardProps> = ({
           </span>
         </div>
 
-        <button
-          onClick={onClose}
-          className="p-1 rounded-lg bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          title="Close Inspector"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {onFlyToGlobal && (
+            <button
+              onClick={onFlyToGlobal}
+              className="px-2 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 font-mono text-[10px] flex items-center gap-1 transition-colors"
+              title="Return to 3D Globe"
+            >
+              <Globe2 className="w-3 h-3 text-cyan-400" />
+              <span>Globe</span>
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            title="Close Inspector"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* 2. Scrollable Body */}
