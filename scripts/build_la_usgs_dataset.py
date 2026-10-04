@@ -283,7 +283,11 @@ for b in building_stats:
     b_enu_x = (b_mx - CENTER_MX) * cos_lat0
     b_enu_y = (b_my - CENTER_MY) * cos_lat0
     
-    local_ground_rel = b['localGroundAMSL'] - GLOBAL_GROUND_Z
+    # Requirement 2: Normalize reconstructed building geometry so:
+    # local ground Z = 0.0m
+    # roof Z = LiDAR height above local ground
+    local_ground_rel = 0.0
+    local_ground_amsl = float(b['localGroundAMSL'])
     
     # Boundary vertices in local ENU
     poly_coords = b['coords_3857']
@@ -302,23 +306,23 @@ for b in building_stats:
         b_z = b_z[::step]
     
     # Filter points near ground (only keep points at least 2.0m above local ground for roof surface)
-    roof_mask = (b_z >= b['localGroundAMSL'] + 2.0)
+    roof_mask = (b_z >= local_ground_amsl + 2.0)
     if np.sum(roof_mask) >= 6:
         roof_x = b_enu_x[roof_mask]
         roof_y = b_enu_y[roof_mask]
-        roof_z = b_z[roof_mask] - GLOBAL_GROUND_Z
+        roof_z = b_z[roof_mask] - local_ground_amsl
     else:
         # If very few roof points, use all points
         roof_x = b_enu_x
         roof_y = b_enu_y
-        roof_z = b_z - GLOBAL_GROUND_Z
+        roof_z = b_z - local_ground_amsl
     
     # Add boundary vertices at the observed upper edge
     # Estimate upper boundary Z by nearest neighbor or 90th percentile
     upper_boundary_z = float(np.percentile(roof_z, 85))
     
     boundary_pts_top = np.column_stack([poly_enu[:-1], np.full(n_boundary, upper_boundary_z)])
-    boundary_pts_bot = np.column_stack([poly_enu[:-1], np.full(n_boundary, local_ground_rel)])
+    boundary_pts_bot = np.column_stack([poly_enu[:-1], np.full(n_boundary, 0.0)])
     
     # Combine roof interior points with top boundary points
     interior_pts = np.column_stack([roof_x, roof_y, roof_z])

@@ -84,9 +84,9 @@ export const LayerControlPanel: React.FC<LayerControlPanelProps> = ({
     },
     {
       key: 'terrain',
-      label: 'Terrain / Elevation (AMSL)',
-      status: 'UNAVAILABLE',
-      detail: 'SRTM raster DEM not integrated'
+      label: 'Terrain / Elevation (3D DEM)',
+      status: 'REAL',
+      detail: 'Cesium World Terrain 3D Elevation'
     }
   ];
 

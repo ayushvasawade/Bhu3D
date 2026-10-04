@@ -229,7 +229,11 @@ def main():
         b_enu_x = (b_mx - CENTER_MX) * cos_lat0
         b_enu_y = (b_my - CENTER_MY) * cos_lat0
 
-        local_ground_rel = b['localGroundAMSL'] - GLOBAL_GROUND_Z
+        # Requirement 2: Normalize reconstructed building geometry so:
+        # local ground Z = 0.0m
+        # roof Z = LiDAR height above local ground (e.g. 71.44m ground -> 0m local, 76.90m peak -> 5.46m local)
+        local_ground_rel = 0.0
+        local_ground_amsl = float(b['localGroundAMSL'])
 
         # Footprint boundary vertices in ENU
         poly_coords = b['coords_3857']
@@ -241,13 +245,13 @@ def main():
         poly_local = Polygon(poly_enu)
 
         # Filter candidate roof points (>= local ground + 2.0m)
-        roof_mask = (b_z >= b['localGroundAMSL'] + 2.0) & (b_z <= b['peakElevationAMSL'] + 0.5)
+        roof_mask = (b_z >= local_ground_amsl + 2.0) & (b_z <= b['peakElevationAMSL'] + 0.5)
         n_roof = np.sum(roof_mask)
 
         if n_roof >= 10:
             roof_x = b_enu_x[roof_mask]
             roof_y = b_enu_y[roof_mask]
-            roof_z = b_z[roof_mask] - GLOBAL_GROUND_Z
+            roof_z = b_z[roof_mask] - local_ground_amsl
 
             # Voxel/Grid downsampling of interior roof points for clean topology
             # Resolution: 2.0m for larger buildings, 1.2m for small buildings
@@ -274,7 +278,7 @@ def main():
             boundary_roof_z = np.array(boundary_roof_z, dtype=np.float32)
 
             boundary_pts_top = np.column_stack([boundary_xy, boundary_roof_z])
-            boundary_pts_bot = np.column_stack([boundary_xy, np.full(n_boundary, local_ground_rel, dtype=np.float32)])
+            boundary_pts_bot = np.column_stack([boundary_xy, np.full(n_boundary, 0.0, dtype=np.float32)])
 
             # Interior points: only keep points strictly inside polygon and at least 1.0m from boundary
             interior_mask = [poly_local.buffer(-0.5).contains(Point(px, py)) for px, py in zip(sub_rx, sub_ry)]
@@ -301,9 +305,9 @@ def main():
                 roof_faces = np.empty((0, 3), dtype=np.int32)
         else:
             # Fallback for buildings with sparse returns (< 10 roof points)
-            flat_roof_z = b['peakElevationAMSL'] - GLOBAL_GROUND_Z
+            flat_roof_z = max(2.5, b['peakElevationAMSL'] - local_ground_amsl)
             boundary_pts_top = np.column_stack([boundary_xy, np.full(n_boundary, flat_roof_z, dtype=np.float32)])
-            boundary_pts_bot = np.column_stack([boundary_xy, np.full(n_boundary, local_ground_rel, dtype=np.float32)])
+            boundary_pts_bot = np.column_stack([boundary_xy, np.full(n_boundary, 0.0, dtype=np.float32)])
             mesh_pts_top = boundary_pts_top
 
             try:
@@ -418,7 +422,11 @@ def main():
         'crs': {
             'sourceCRS': 'EPSG:3857 (Web Mercator)',
             'targetCRS': 'EPSG:4326 (WGS84)',
-            'verticalDatum': 'NAVD88 (Meters)'
+            'verticalDatum': 'NAVD88 (Meters)',
+            'geoidSeparationMeters': -35.74,
+            'ellipsoidDatum': 'WGS84 Reference Ellipsoid',
+            'localMeshOrigin': 'Normalized Local Ground Z = 0.0m',
+            'verticalPlacementMechanism': 'Single Geographic Anchor at Terrain Elevation'
         },
         'lidarSource': {
             'provider': 'USGS 3D Elevation Program (3DEP)',

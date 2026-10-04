@@ -21,7 +21,11 @@
   "crs": {
     "sourceCRS": "EPSG:3857 (Web Mercator)",
     "targetCRS": "EPSG:4326 (WGS84)",
-    "verticalDatum": "NAVD88 (Meters)"
+    "verticalDatum": "NAVD88 (Meters)",
+    "geoidSeparationMeters": -35.74,
+    "ellipsoidDatum": "WGS84 Reference Ellipsoid",
+    "localMeshOrigin": "Normalized Local Ground Z = 0.0m",
+    "verticalPlacementMechanism": "Single Geographic Anchor at Terrain Elevation"
   },
   "lidarSource": {
     "provider": "USGS 3D Elevation Program (3DEP)",

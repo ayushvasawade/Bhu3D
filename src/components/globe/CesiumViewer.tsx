@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
-import { Building2, Layers, Satellite, Map, Landmark, AlertCircle, Box, CheckCircle2 } from 'lucide-react';
+import { Building2, Layers, Satellite, Map, Landmark, AlertCircle, Box, CheckCircle2, Ruler } from 'lucide-react';
 import { PropertyRecord, ViewLevel } from '../../types/property';
 import { BuildingFootprint, Parcel } from '../../types/geospatial';
 import {
@@ -19,6 +19,7 @@ import { lidarService } from '../../services/lidarService';
 import { geospatialService } from '../../services/geospatialDataService';
 import { externalGeoService } from '../../services/externalGeoService';
 import { DataProvenanceBadge } from '../common/DataProvenanceBadge';
+import { VerticalPlacementDebugPanel } from '../lidar/VerticalPlacementDebugPanel';
 
 import { LayerVisibilityState } from './LayerControlPanel';
 import { YoloBuildingDetection } from '../../types/yolo';
@@ -147,6 +148,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   const [bhuvanAlert, setBhuvanAlert] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
 
+  // Vertical placement & terrain audit state
+  const [isVerticalPlacementDebugOpen, setIsVerticalPlacementDebugOpen] = useState(false);
+  const [sampledTerrainHeight, setSampledTerrainHeight] = useState<number>(0.0);
+  const [groundAnchorHeight, setGroundAnchorHeight] = useState<number>(0.0);
+
   // Screen-projected callout position
   const [calloutScreenPos, setCalloutScreenPos] = useState<{ x: number; y: number; visible: boolean }>({
     x: 0,
@@ -224,6 +230,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       });
       viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#000000');
       viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#09090b');
+      viewer.scene.globe.depthTestAgainstTerrain = true;
 
       // Camera move listener for live HUD telemetry
       removeCameraListener = viewer.camera.changed.addEventListener(() => {
@@ -243,14 +250,15 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         let pos: Cesium.Cartesian3 | undefined;
         if (isRealLidarMode) {
           if (activeDataset === 'la_south_park') {
+            const baseGround = layers?.terrain ? sampledTerrainHeight : 0.0;
             if (selectedLABuilding) {
               pos = Cesium.Cartesian3.fromDegrees(
                 selectedLABuilding.center.longitude,
                 selectedLABuilding.center.latitude,
-                selectedLABuilding.peakElevationAMSL + 5
+                baseGround + selectedLABuilding.derivedHeightMeters + 5
               );
             } else {
-              pos = Cesium.Cartesian3.fromDegrees(-118.260903, 34.037095, 120);
+              pos = Cesium.Cartesian3.fromDegrees(-118.260903, 34.037095, baseGround + 60);
             }
           } else if (realBuildingEntityRef.current) {
             pos = realBuildingEntityRef.current.position?.getValue(viewer.clock.currentTime);
@@ -275,8 +283,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       // Initial Camera: In Real LiDAR mode, fly directly to selected dataset
       if (isRealLidarMode) {
         if (activeDataset === 'la_south_park') {
+          const laGround = layers?.terrain ? 35.7 : 0.0;
           viewer.camera.setView({
-            destination: Cesium.Cartesian3.fromDegrees(-118.260903, 34.037095 - 0.0055, 420),
+            destination: Cesium.Cartesian3.fromDegrees(-118.260903, 34.037095 - 0.0055, laGround + 420),
             orientation: {
               heading: Cesium.Math.toRadians(0),
               pitch: Cesium.Math.toRadians(-35),
@@ -284,8 +293,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
             }
           });
         } else {
+          const utahGround = layers?.terrain ? 1366.4 : 0.0;
           viewer.camera.setView({
-            destination: Cesium.Cartesian3.fromDegrees(-111.888200, 40.777394 - 0.0035, 380),
+            destination: Cesium.Cartesian3.fromDegrees(-111.888200, 40.777394 - 0.0035, utahGround + 380),
             orientation: {
               heading: Cesium.Math.toRadians(0),
               pitch: Cesium.Math.toRadians(-32),
@@ -449,6 +459,50 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [basemap]);
 
+  // 2b. Manage Cesium Terrain Provider & Sample Elevation
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    let isCancelled = false;
+    const updateTerrain = async () => {
+      const isLA = activeDataset === 'la_south_park';
+      const sampleLon = isLA ? -118.260903 : (realLidarMetadata?.geographicLocation.longitude || -111.888200);
+      const sampleLat = isLA ? 34.037095 : (realLidarMetadata?.geographicLocation.latitude || 40.777394);
+
+      if (layers?.terrain) {
+        try {
+          const terrainProvider = await Cesium.createWorldTerrainAsync();
+          if (isCancelled || !viewerRef.current || viewer.isDestroyed()) return;
+          viewer.terrainProvider = terrainProvider;
+
+          // Sample terrain height at the dataset anchor location
+          const carto = [Cesium.Cartographic.fromDegrees(sampleLon, sampleLat)];
+          await Cesium.sampleTerrainMostDetailed(terrainProvider, carto);
+          if (!isCancelled) {
+            const h = carto[0].height || (isLA ? 35.70 : 1366.40);
+            setSampledTerrainHeight(h);
+            setGroundAnchorHeight(h);
+          }
+        } catch (e) {
+          console.warn('World Terrain load failed, fallback to ellipsoid:', e);
+          if (!isCancelled) {
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+            setSampledTerrainHeight(0.0);
+            setGroundAnchorHeight(0.0);
+          }
+        }
+      } else {
+        viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+        setSampledTerrainHeight(0.0);
+        setGroundAnchorHeight(0.0);
+      }
+    };
+
+    updateTerrain();
+    return () => { isCancelled = true; };
+  }, [layers?.terrain, activeDataset, realLidarMetadata]);
+
   // 3. Load Real LiDAR Building or Conceptual Sandbox Layers
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -485,19 +539,21 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       if (activeDataset === 'la_south_park') {
         const centerLon = -118.260903;
         const centerLat = 34.037095;
-        const centerAlt = 72.17;
+        // Requirement 2, 3, 4: Reconstructed GLB geometry is normalized (local ground Z = 0).
+        // Anchor to ground/terrain elevation without double-adding LiDAR ground.
+        const centerAlt = layers?.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
 
-        // Add Reconstructed Watertight GLB Model with 129 genuine buildings
+        // Add Reconstructed Watertight GLB Model with 128 genuine buildings
         const bldEntity = viewer.entities.add({
           id: 'real-lidar-la-buildings',
-          name: 'USGS 3DEP LiDAR Reconstructed City (129 Meshes)',
+          name: 'USGS 3DEP LiDAR Reconstructed City (128 Meshes)',
           position: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, centerAlt),
           model: {
             uri: '/models/la_usgs_buildings.glb',
             minimumPixelSize: 64,
             maximumScale: 20000,
             shadows: Cesium.ShadowMode.ENABLED,
-            heightReference: Cesium.HeightReference.NONE
+            heightReference: layers?.terrain ? Cesium.HeightReference.CLAMP_TO_GROUND : Cesium.HeightReference.NONE
           }
         });
         (bldEntity as any).isRealLidarBuilding = true;
@@ -506,7 +562,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         // Add Ground Survey Bounds Radar Ring
         const groundMarker = viewer.entities.add({
           id: 'real-lidar-la-ground-ring',
-          name: 'USGS Survey Footprint Extent (DTLA South Park, 72.17m AMSL Datum)',
+          name: 'USGS Survey Footprint Extent (DTLA South Park, Normalized Datum)',
           position: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, centerAlt + 0.5),
           ellipse: {
             semiMajorAxis: 320.0,
@@ -520,14 +576,14 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         });
         realGroundMarkerRef.current = groundMarker;
 
-        // Add 2D building footprint outlines for all 129 buildings when layers.osmBuildings is on or in COMPARE mode
-        if (laMetadata?.buildings && (layers.osmBuildings || lidarViewMode === 'compare')) {
+        // Add 2D building footprint outlines for all 128 buildings when layers.osmBuildings is on or in COMPARE mode
+        if (laMetadata?.buildings && (layers?.osmBuildings || lidarViewMode === 'compare')) {
           const laFootprintEntities: Cesium.Entity[] = [];
           for (const b of laMetadata.buildings) {
             if (!b.footprintCoordinates || b.footprintCoordinates.length < 3) continue;
             const coords = b.footprintCoordinates;
             const positions = Cesium.Cartesian3.fromDegreesArrayHeights(
-              coords.map(([lon, lat]) => [lon, lat, b.localGroundAMSL + 0.15]).flat()
+              coords.map(([lon, lat]) => [lon, lat, centerAlt + 0.15]).flat()
             );
 
             const isCompare = lidarViewMode === 'compare';
@@ -536,6 +592,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
               name: `${b.name} Footprint`,
               polyline: {
                 positions,
+                clampToGround: !!layers?.terrain,
                 width: isCompare ? 2.5 : 1.5,
                 material: isCompare
                   ? Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.9)
@@ -553,7 +610,8 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
       if (realLidarMetadata) {
         const { longitude, latitude } = realLidarMetadata.geographicLocation;
-        const bldGroundAlt = realLidarMetadata.elevationMetrics.baseGroundElevationMeters || 1384.5;
+        // Requirement 3 & 4: Anchor normalized GLB to the building's actual WGS84 coordinates and terrain ground elevation
+        const bldGroundAlt = layers?.terrain ? (sampledTerrainHeight || 1366.40) : 0.0;
         const bldPos = Cesium.Cartesian3.fromDegrees(longitude, latitude, bldGroundAlt);
 
         // Add Reconstructed Watertight GLB Model
@@ -566,7 +624,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
             minimumPixelSize: 64,
             maximumScale: 20000,
             shadows: Cesium.ShadowMode.ENABLED,
-            heightReference: Cesium.HeightReference.NONE
+            heightReference: layers?.terrain ? Cesium.HeightReference.CLAMP_TO_GROUND : Cesium.HeightReference.NONE
           }
         });
         (bldEntity as any).isRealLidarBuilding = true;
@@ -576,12 +634,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         // Add Ground Radar Ring around building precinct
         const groundMarker = viewer.entities.add({
           id: 'real-lidar-ground-ring',
-          name: `Utah State Capitol Ground Datum (${bldGroundAlt.toFixed(2)}m AMSL)`,
-          position: Cesium.Cartesian3.fromDegrees(longitude, latitude, bldGroundAlt + 1),
+          name: `Utah State Capitol Ground Datum (${bldGroundAlt.toFixed(2)}m Datum)`,
+          position: Cesium.Cartesian3.fromDegrees(longitude, latitude, bldGroundAlt + 0.5),
           ellipse: {
             semiMajorAxis: 160.0,
             semiMinorAxis: 110.0,
-            height: bldGroundAlt + 1,
+            height: bldGroundAlt + 0.5,
             material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.18),
             outline: true,
             outlineColor: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85),
@@ -687,7 +745,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     };
 
     loadGeospatialLayers();
-  }, [currentProperty, selectedBuilding, isRealLidarMode, activeDataset, realLidarMetadata, laMetadata, layers.osmBuildings, lidarViewMode]);
+  }, [currentProperty, selectedBuilding, isRealLidarMode, activeDataset, realLidarMetadata, laMetadata, layers?.osmBuildings, layers?.terrain, sampledTerrainHeight, lidarViewMode]);
 
   // 3c. Manage Selected LA Building Footprint, Structural Slabs, & Inferred Floor Volumes
   useEffect(() => {
@@ -721,9 +779,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     const explodeSpacing = floorInspectionOptions?.explodeSpacingMeters ?? 4.0;
     const floorH = floorInspectionOptions?.floorHeightAssumption ?? 3.5;
 
-    const groundZ = selectedLABuilding.localGroundAMSL;
+    const baseGround = layers?.terrain ? sampledTerrainHeight : 0.0;
     const roofZ = selectedLABuilding.mainRoofAMSL || selectedLABuilding.peakElevationAMSL;
-    const bldHeight = Math.max(2.5, roofZ - groundZ);
+    const bldHeight = selectedLABuilding.derivedHeightMeters || Math.max(2.5, roofZ - selectedLABuilding.localGroundAMSL);
     const computedFloors = Math.max(1, Math.round(bldHeight / floorH));
     const actualFloorHeight = bldHeight / computedFloors;
 
@@ -733,8 +791,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       name: `${selectedLABuilding.name} OSM Footprint Outline`,
       polyline: {
         positions: Cesium.Cartesian3.fromDegreesArrayHeights(
-          coords.map(([lon, lat]) => [lon, lat, groundZ + 0.25]).flat()
+          coords.map(([lon, lat]) => [lon, lat, baseGround + 0.25]).flat()
         ),
+        clampToGround: !!layers?.terrain,
         width: isCompare ? 3.5 : 2.5,
         material: isCompare
           ? Cesium.Color.fromCssColorString('#f59e0b')
@@ -749,7 +808,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       name: `${selectedLABuilding.name} Footprint Base Polygon`,
       polygon: {
         hierarchy: Cesium.Cartesian3.fromDegreesArray(flatDegrees),
-        height: groundZ + 0.1,
+        height: baseGround + 0.1,
         material: isCompare
           ? Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.25)
           : Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.20)
@@ -766,13 +825,14 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         polyline: {
           positions: Cesium.Cartesian3.fromDegreesArrayHeights(
             [
-              [minLon - pad, minLat - pad, groundZ + 0.4],
-              [maxLon + pad, minLat - pad, groundZ + 0.4],
-              [maxLon + pad, maxLat + pad, groundZ + 0.4],
-              [minLon - pad, maxLat + pad, groundZ + 0.4],
-              [minLon - pad, minLat - pad, groundZ + 0.4]
+              [minLon - pad, minLat - pad, baseGround + 0.4],
+              [maxLon + pad, minLat - pad, baseGround + 0.4],
+              [maxLon + pad, maxLat + pad, baseGround + 0.4],
+              [minLon - pad, maxLat + pad, baseGround + 0.4],
+              [minLon - pad, minLat - pad, baseGround + 0.4]
             ].flat()
           ),
+          clampToGround: !!layers?.terrain,
           width: 2.5,
           material: Cesium.Color.fromCssColorString('#10b981')
         }
@@ -787,7 +847,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         name: `${selectedLABuilding.name} Parapet Perimeter Highlight`,
         polyline: {
           positions: Cesium.Cartesian3.fromDegreesArrayHeights(
-            coords.map(([lon, lat]) => [lon, lat, roofZ + 0.2]).flat()
+            coords.map(([lon, lat]) => [lon, lat, baseGround + bldHeight + 0.2]).flat()
           ),
           width: 2.0,
           material: Cesium.Color.fromCssColorString('#38bdf8').withAlpha(0.85)
@@ -798,8 +858,8 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
     // 4. Inferred Structural Floor Slabs & Interior Volumes (Requirements D & E)
     for (let fl = 1; fl <= computedFloors; fl++) {
-      const flBaseZ = groundZ + (fl - 1) * actualFloorHeight;
-      const flTopZ = fl === computedFloors ? roofZ : groundZ + fl * actualFloorHeight;
+      const flBaseZ = baseGround + (fl - 1) * actualFloorHeight;
+      const flTopZ = fl === computedFloors ? baseGround + bldHeight : baseGround + fl * actualFloorHeight;
       const flSpan = flTopZ - flBaseZ;
       const zOffset = isExploded ? (fl - 1) * explodeSpacing : 0;
 
@@ -886,7 +946,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       }
       floorEntitiesRef.current = [];
     };
-  }, [activeDataset, selectedLABuilding, selectedFloor, floorInspectionOptions, lidarViewMode]);
+  }, [activeDataset, selectedLABuilding, selectedFloor, floorInspectionOptions, lidarViewMode, layers?.terrain, sampledTerrainHeight]);
 
   // 3d. Highlight Real LiDAR Points for the Selected LA Building
   useEffect(() => {
@@ -911,10 +971,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     const bIndices = pointData.buildingIndices;
     if (!bIndices) return;
 
+    const centerAlt = layers?.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
     const centerCartesian = Cesium.Cartesian3.fromDegrees(
       pointData.centerLon || -118.260903,
       pointData.centerLat || 34.037095,
-      pointData.centerAlt || 72.17
+      centerAlt
     );
     const enuMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(centerCartesian);
 
@@ -971,7 +1032,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         highlightPointPrimitivesRef.current = null;
       }
     };
-  }, [activeDataset, selectedLABuilding, selectedFloor, pointCloudOptions.pointSize]);
+  }, [activeDataset, selectedLABuilding, selectedFloor, pointCloudOptions.pointSize, layers?.terrain, sampledTerrainHeight]);
 
   // Helper: Topographic elevation colormap (Blue -> Cyan -> Green -> Yellow -> Red)
   const getTopographicColor = (amsl: number, minZ = 1377.0, maxZ = 1459.0): Cesium.Color => {
@@ -1081,10 +1142,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
             cachedLAPointDataRef.current = await lidarService.getLAPointCloudData();
           }
           pointData = cachedLAPointDataRef.current;
+          const centerAlt = layers?.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
           centerCartesian = Cesium.Cartesian3.fromDegrees(
             pointData.centerLon || -118.260903,
             pointData.centerLat || 34.037095,
-            pointData.centerAlt || 72.17
+            centerAlt
           );
         } else {
           if (!cachedPointDataRef.current) {
@@ -1092,7 +1154,8 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           }
           pointData = cachedPointDataRef.current;
           const { longitude, latitude } = realLidarMetadata!.geographicLocation;
-          centerCartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);
+          const centerAlt = layers?.terrain ? (sampledTerrainHeight || 1366.40) : 0.0;
+          centerCartesian = Cesium.Cartesian3.fromDegrees(longitude, latitude, centerAlt);
         }
 
         if (isCancelled || !viewerRef.current || viewer.isDestroyed()) return;
@@ -1191,7 +1254,8 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     compareSubMode,
     pointCloudOptions,
     floorInspectionOptions,
-    layers
+    layers,
+    sampledTerrainHeight
   ]);
 
   // 3c. Manage YOLO Segmentation Masks & Multi-Layer Alignment Entities
@@ -1378,45 +1442,46 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           return;
         }
 
+        const laGround = layers?.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
         switch (cameraPreset) {
           case 'overview':
             viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0055, 420),
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0055, laGround + 420),
               orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-35), roll: 0 },
               duration: 1.8
             });
             break;
           case 'domeCloseUp':
             viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(-118.2625, 34.0372 - 0.0015, 140),
+              destination: Cesium.Cartesian3.fromDegrees(-118.2625, 34.0372 - 0.0015, laGround + 140),
               orientation: { heading: Cesium.Math.toRadians(350), pitch: Cesium.Math.toRadians(-22), roll: 0 },
               duration: 1.8
             });
             break;
           case 'grandSouthPortico':
             viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0028, 120),
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0028, laGround + 120),
               orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-15), roll: 0 },
               duration: 1.8
             });
             break;
           case 'aerialTopDown':
             viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, 650),
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, laGround + 650),
               orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-90), roll: 0 },
               duration: 1.8
             });
             break;
           case 'frontElevation':
             viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0035, 110),
+              destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0035, laGround + 70),
               orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-8), roll: 0 },
               duration: 1.8
             });
             break;
           case 'sideElevation':
             viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(centerLon + 0.0035, centerLat, 110),
+              destination: Cesium.Cartesian3.fromDegrees(centerLon + 0.0035, centerLat, laGround + 70),
               orientation: { heading: Cesium.Math.toRadians(270), pitch: Cesium.Math.toRadians(-8), roll: 0 },
               duration: 1.8
             });
@@ -1427,6 +1492,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
       if (realLidarMetadata) {
         const { longitude, latitude } = realLidarMetadata.geographicLocation;
+        const utahGround = layers?.terrain ? (sampledTerrainHeight || 1366.40) : 0.0;
 
       if (viewLevel === 'global') {
         viewer.camera.flyTo({
@@ -1458,7 +1524,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       switch (cameraPreset) {
         case 'overview':
           viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0035, 380),
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0035, utahGround + 380),
             orientation: {
               heading: Cesium.Math.toRadians(0),
               pitch: Cesium.Math.toRadians(-32),
@@ -1470,7 +1536,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
         case 'domeCloseUp':
           viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(longitude + 0.0008, latitude - 0.0012, 120),
+            destination: Cesium.Cartesian3.fromDegrees(longitude + 0.0008, latitude - 0.0012, utahGround + 120),
             orientation: {
               heading: Cesium.Math.toRadians(330),
               pitch: Cesium.Math.toRadians(-22),
@@ -1482,7 +1548,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
         case 'grandSouthPortico':
           viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0018, 75),
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0018, utahGround + 75),
             orientation: {
               heading: Cesium.Math.toRadians(0),
               pitch: Cesium.Math.toRadians(-12),
@@ -1494,7 +1560,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
         case 'aerialTopDown':
           viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, 520),
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, utahGround + 520),
             orientation: {
               heading: Cesium.Math.toRadians(0),
               pitch: Cesium.Math.toRadians(-90),
@@ -1506,7 +1572,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
         case 'frontElevation':
           viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0022, 1420),
+            destination: Cesium.Cartesian3.fromDegrees(longitude, latitude - 0.0022, utahGround + 45),
             orientation: {
               heading: Cesium.Math.toRadians(0),
               pitch: Cesium.Math.toRadians(-5),
@@ -1518,7 +1584,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
         case 'sideElevation':
           viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(longitude + 0.0022, latitude, 1420),
+            destination: Cesium.Cartesian3.fromDegrees(longitude + 0.0022, latitude, utahGround + 45),
             orientation: {
               heading: Cesium.Math.toRadians(270),
               pitch: Cesium.Math.toRadians(-5),
@@ -1602,11 +1668,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     const viewer = viewerRef.current;
     if (!viewer || !selectedLABuilding || activeDataset !== 'la_south_park') return;
 
+    const baseGround = layers?.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
     viewer.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(
         selectedLABuilding.center.longitude,
         selectedLABuilding.center.latitude - 0.002,
-        selectedLABuilding.peakElevationAMSL + 90
+        baseGround + selectedLABuilding.derivedHeightMeters + 90
       ),
       orientation: {
         heading: Cesium.Math.toRadians(0),
@@ -1615,7 +1682,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       },
       duration: 1.5
     });
-  }, [selectedLABuilding, activeDataset]);
+  }, [selectedLABuilding, activeDataset, layers?.terrain, sampledTerrainHeight]);
 
   if (initError) {
     return (
@@ -1778,6 +1845,39 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           )}
         </div>
       </div>
+
+      {/* Vertical Placement Debug Mode Toggle */}
+      {isRealLidarMode && (
+        <div className="absolute top-20 left-5 z-20 pointer-events-auto">
+          <button
+            onClick={() => setIsVerticalPlacementDebugOpen(!isVerticalPlacementDebugOpen)}
+            title="Audit vertical placement: LiDAR ground, GLB Z, anchor, terrain height"
+            className={`px-3 py-2 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 text-xs font-medium transition-all ${
+              isVerticalPlacementDebugOpen
+                ? 'bg-cyan-500 text-black border-cyan-400 font-bold shadow-cyan-500/30'
+                : 'bg-zinc-950/90 hover:bg-zinc-900 border-zinc-800 text-zinc-200'
+            }`}
+          >
+            <Ruler className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Vertical Placement Audit</span>
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-cyan-950 border border-cyan-800 text-cyan-300">
+              {layers?.terrain ? '3D DEM' : 'ELLIPSOID'}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Vertical Placement Debug Panel */}
+      <VerticalPlacementDebugPanel
+        isOpen={isVerticalPlacementDebugOpen}
+        onClose={() => setIsVerticalPlacementDebugOpen(false)}
+        dataset={activeDataset}
+        selectedLABuilding={selectedLABuilding}
+        realLidarMetadata={realLidarMetadata}
+        isTerrainEnabled={!!layers?.terrain}
+        sampledTerrainHeight={sampledTerrainHeight}
+        groundAnchorHeight={groundAnchorHeight}
+      />
 
       {/* Bhuvan Connectivity / Error Alert Banner */}
       {bhuvanAlert && (
