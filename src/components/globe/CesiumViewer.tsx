@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import {
+  Globe2,
+  Maximize2,
+  Compass,
+  ArrowUp
+} from 'lucide-react';
+import {
   LABuildingRecord,
   LADatasetMetadata,
   FloorInspectionOptions,
@@ -40,6 +46,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const baseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
   const realBuildingEntityRef = useRef<Cesium.Entity | null>(null);
   const floorEntitiesRef = useRef<Cesium.Entity[]>([]);
   const pointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
@@ -48,20 +55,27 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
   const [sampledTerrainHeight, setSampledTerrainHeight] = useState<number | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const [cameraMode, setCameraMode] = useState<'precinct' | 'global'>('precinct');
 
   const centerLon = -118.260903;
   const centerLat = 34.037095;
 
-  // 1. Initialize Cesium Viewer
+  // 1. Initialize Cesium 3D Globe with High-Resolution Satellite Base Imagery
   useEffect(() => {
     if (!containerRef.current || viewerRef.current) return;
 
     try {
-      (Cesium.Ion as any).defaultAccessToken =
-        import.meta.env.VITE_CESIUM_ION_ACCESS_TOKEN ||
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJkZW1vLWluZGlhLWNhZGFzdHJlIiwiaWQiOjEyM30.signature';
+      // Create high-resolution ESRI World Imagery provider (free, reliable, global satellite)
+      const satelliteProvider = new Cesium.UrlTemplateImageryProvider({
+        url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        maximumLevel: 19,
+        credit: 'ESRI World Imagery'
+      });
+      const baseLayer = new Cesium.ImageryLayer(satelliteProvider);
+      baseLayerRef.current = baseLayer;
 
       const viewer = new Cesium.Viewer(containerRef.current, {
+        baseLayer: baseLayer,
         animation: false,
         baseLayerPicker: false,
         fullscreenButton: false,
@@ -83,10 +97,19 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         }
       });
 
+      // Enable 3D Globe features: atmosphere halo, skybox stars, terrain depth test
+      viewer.scene.globe.show = true;
       viewer.scene.globe.depthTestAgainstTerrain = true;
-      viewer.scene.globe.enableLighting = false;
+      viewer.scene.globe.enableLighting = false; // Bright, clear satellite visibility everywhere
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#09090b');
       viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
-      viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#09090b');
+
+      if (viewer.scene.skyAtmosphere) {
+        viewer.scene.skyAtmosphere.show = true;
+      }
+      if (viewer.scene.skyBox) {
+        viewer.scene.skyBox.show = true;
+      }
 
       // Initial Camera Placement over DTLA South Park
       viewer.camera.setView({
@@ -150,7 +173,14 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, []);
 
-  // 2. Terrain Provider Management
+  // 2. Satellite Imagery Layer Visibility Toggle
+  useEffect(() => {
+    if (baseLayerRef.current) {
+      baseLayerRef.current.show = layers.satellite;
+    }
+  }, [layers.satellite]);
+
+  // 3. Terrain Provider Management
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
@@ -183,12 +213,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [layers.terrain]);
 
-  // 3. Render 3D Reconstructed GLB Mesh
+  // 4. Render 3D Reconstructed GLB Mesh
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
 
-    // Remove existing model entity
     if (realBuildingEntityRef.current) {
       viewer.entities.remove(realBuildingEntityRef.current);
       realBuildingEntityRef.current = null;
@@ -217,7 +246,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [layers.reconstruction, layers.terrain, sampledTerrainHeight]);
 
-  // 4. Render OSM Building Footprints (Orange Polygons)
+  // 5. Render OSM Building Footprints (Orange Polygons)
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
@@ -255,7 +284,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [layers.osm, laMetadata, selectedBuilding, layers.terrain, sampledTerrainHeight]);
 
-  // 5. Render LiDAR Point Cloud
+  // 6. Render LiDAR Point Cloud
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
@@ -284,7 +313,6 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
             const dy = pointData.positions[i * 3 + 1];
             const dz = pointData.positions[i * 3 + 2];
 
-            // Local ENU offset to WGS84
             const lon = centerLon + dx / (111320 * Math.cos((centerLat * Math.PI) / 180));
             const lat = centerLat + dy / 110540;
             const alt = groundAlt + dz;
@@ -307,7 +335,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [layers.lidar, layers.terrain, sampledTerrainHeight, pointCloudOptions]);
 
-  // 6. Render YOLO Aerial Segmentation Masks (Magenta Polygons)
+  // 7. Render YOLO Aerial Segmentation Masks (Magenta Polygons)
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
@@ -341,7 +369,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [layers.yolo, yoloDetections]);
 
-  // 7. Render Inferred Vertical Floors (Transparent Stacked Volumes)
+  // 8. Render Inferred Vertical Floors (Transparent Stacked Volumes)
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
@@ -390,7 +418,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [layers.floorVolumes, selectedBuilding, selectedFloor, floorInspectionOptions, layers.terrain, sampledTerrainHeight]);
 
-  // 8. Camera Fly-To on Building Selection
+  // 9. Camera Fly-To on Building Selection
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed()) return;
@@ -410,12 +438,100 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         },
         duration: 1.5
       });
+      setCameraMode('precinct');
     }
   }, [selectedBuilding]);
+
+  // Camera Fly Helpers
+  const flyToGlobal = () => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat, 16000000),
+      orientation: {
+        heading: 0,
+        pitch: Cesium.Math.toRadians(-90),
+        roll: 0
+      },
+      duration: 2.2
+    });
+    setCameraMode('global');
+  };
+
+  const flyToPrecinct = () => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    const groundAlt = layers.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(centerLon, centerLat - 0.0055, groundAlt + 420),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-35),
+        roll: 0
+      },
+      duration: 2.0
+    });
+    setCameraMode('precinct');
+  };
+
+  const resetOrientation = () => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    const currentPos = viewer.camera.positionCartographic;
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromRadians(currentPos.longitude, currentPos.latitude, currentPos.height),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-35),
+        roll: 0
+      },
+      duration: 1.2
+    });
+  };
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-zinc-950">
       <div ref={containerRef} className="w-full h-full" />
+
+      {/* 3D Globe Navigation HUD (Global Earth vs 3D Precinct) */}
+      <div className="absolute top-18 right-5 z-20 pointer-events-auto flex items-center gap-1.5 p-1 bg-black/85 backdrop-blur-md rounded-2xl border border-zinc-800 shadow-xl">
+        <button
+          onClick={flyToGlobal}
+          title="Zoom out to Full 3D Earth Globe"
+          className={`py-1.5 px-3 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
+            cameraMode === 'global'
+              ? 'bg-white text-black shadow-sm'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+          }`}
+        >
+          <Globe2 className="w-3.5 h-3.5" />
+          <span>3D Globe</span>
+        </button>
+
+        <button
+          onClick={flyToPrecinct}
+          title="Zoom in to 3D LiDAR Precinct (Downtown LA)"
+          className={`py-1.5 px-3 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${
+            cameraMode === 'precinct' && !selectedBuilding
+              ? 'bg-white text-black shadow-sm'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+          }`}
+        >
+          <Maximize2 className="w-3.5 h-3.5" />
+          <span>Precinct 3D</span>
+        </button>
+
+        <button
+          onClick={resetOrientation}
+          title="Reset Orientation (North Up)"
+          className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+        >
+          <ArrowUp className="w-3.5 h-3.5" />
+        </button>
+      </div>
 
       {initError && (
         <div className="absolute inset-0 flex items-center justify-center p-6 bg-black/90 text-white z-50">
