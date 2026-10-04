@@ -164,6 +164,13 @@ export interface LABuildingRecord {
   center: { latitude: number; longitude: number };
   levels: LABuildingLevel[];
   footprintCoordinates: [number, number][];
+
+  // YOLO segmentation & fusion properties
+  yoloMaskCoordinates?: [number, number][];
+  yoloConfidence?: number;
+  yoloIoU?: number;
+  alignmentScore?: number;
+  dataFusionStatus?: 'ALIGNED' | 'MINOR_OFFSET' | 'MISMATCH' | 'YOLO_ONLY' | 'OSM_ONLY';
 }
 
 export interface LADatasetMetadata {

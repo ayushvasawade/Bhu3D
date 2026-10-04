@@ -21,6 +21,7 @@ import { externalGeoService } from '../../services/externalGeoService';
 import { DataProvenanceBadge } from '../common/DataProvenanceBadge';
 
 import { LayerVisibilityState } from './LayerControlPanel';
+import { YoloBuildingDetection } from '../../types/yolo';
 
 interface CesiumViewerProps {
   currentProperty: PropertyRecord;
@@ -44,6 +45,8 @@ interface CesiumViewerProps {
   lidarViewMode?: LidarViewMode;
   compareSubMode?: LidarCompareSubMode;
   pointCloudOptions?: PointCloudRenderOptions;
+  yoloDetections?: YoloBuildingDetection[];
+  onViewerReady?: (viewer: Cesium.Viewer) => void;
 }
 
 type BasemapStyle = 'satellite' | 'dark' | 'streets' | 'bhuvan';
@@ -90,7 +93,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     satellite: true,
     terrain: false,
     propertyVolume: true,
-    validationZones: true
+    validationZones: true,
+    yoloSegmentation: true,
+    alignmentValidation: true
   },
   targetFlyLocation = null,
   lidarViewMode = 'reconstruction',
@@ -101,7 +106,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     densityPercentage: 100,
     buildingOnly: false,
     meshOpacity: 0.65
-  }
+  },
+  yoloDetections = [],
+  onViewerReady
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -127,8 +134,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   realLidarMetadataRef.current = realLidarMetadata;
   const buildingEntitiesRef = useRef<Cesium.Entity[]>([]);
   const parcelEntitiesRef = useRef<Cesium.Entity[]>([]);
+  const yoloEntitiesRef = useRef<Cesium.Entity[]>([]);
+  const alignmentEntitiesRef = useRef<Cesium.Entity[]>([]);
   const currentBaseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
   const clickHandlerRef = useRef<Cesium.ScreenSpaceEventHandler | null>(null);
+  const onViewerReadyRef = useRef(onViewerReady);
+  onViewerReadyRef.current = onViewerReady;
 
 
   const [basemap, setBasemap] = useState<BasemapStyle>('satellite');
@@ -203,6 +214,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       });
 
       viewerRef.current = viewer;
+      onViewerReadyRef.current?.(viewer);
 
       // Atmospheric and lighting configuration
       viewer.scene.globe.enableLighting = true;
@@ -1182,7 +1194,143 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     layers
   ]);
 
-  // Handle direct target fly requests from search selection
+  // 3c. Manage YOLO Segmentation Masks & Multi-Layer Alignment Entities
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    // Clean up existing YOLO entities
+    yoloEntitiesRef.current.forEach((e) => {
+      try {
+        viewer.entities.remove(e);
+      } catch {}
+    });
+    yoloEntitiesRef.current = [];
+
+    // Clean up existing alignment entities
+    alignmentEntitiesRef.current.forEach((e) => {
+      try {
+        viewer.entities.remove(e);
+      } catch {}
+    });
+    alignmentEntitiesRef.current = [];
+
+    if (activeDataset !== 'la_south_park' || !laMetadata?.buildings) return;
+
+    const showYolo = layers.yoloSegmentation ?? true;
+    const showAlignment = layers.alignmentValidation ?? true;
+
+    if (!showYolo && !showAlignment) return;
+
+    const newYoloEntities: Cesium.Entity[] = [];
+    const newAlignmentEntities: Cesium.Entity[] = [];
+
+    // 1. Render building YOLO masks (from fused LABuildingRecord or yoloDetections)
+    for (const b of laMetadata.buildings) {
+      const coords = b.yoloMaskCoordinates;
+      if (showYolo && coords && coords.length >= 3) {
+        const groundAlt = b.localGroundAMSL + 0.15;
+
+        const yoloEntity = viewer.entities.add({
+          id: `la-yolo-mask-${b.id}`,
+          name: `${b.name} YOLOv8 Segmentation Mask`,
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(
+              coords.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, groundAlt))
+            ),
+            material: Cesium.Color.fromCssColorString('#ec4899').withAlpha(0.28),
+            outline: true,
+            outlineColor: Cesium.Color.fromCssColorString('#f43f5e').withAlpha(0.9),
+            outlineWidth: 2,
+            height: groundAlt
+          }
+        });
+        (yoloEntity as any).laBuildingData = b;
+        newYoloEntities.push(yoloEntity);
+      }
+
+      // 2. Render alignment discrepancy indicators
+      if (showAlignment && coords && coords.length >= 3) {
+        let sumLon = 0;
+        let sumLat = 0;
+        for (const [l, lt] of coords) {
+          sumLon += l;
+          sumLat += lt;
+        }
+        const yoloCentroid = [sumLon / coords.length, sumLat / coords.length];
+        const osmCentroid = [b.center.longitude, b.center.latitude];
+
+        const dLat = (yoloCentroid[1] - osmCentroid[1]) * 110540;
+        const dLon = (yoloCentroid[0] - osmCentroid[0]) * 111320 * Math.cos((osmCentroid[1] * Math.PI) / 180);
+        const offsetDist = Math.hypot(dLon, dLat);
+
+        if (offsetDist > 2.0) {
+          const vectorPositions = [
+            Cesium.Cartesian3.fromDegrees(osmCentroid[0], osmCentroid[1], b.localGroundAMSL + 0.5),
+            Cesium.Cartesian3.fromDegrees(yoloCentroid[0], yoloCentroid[1], b.localGroundAMSL + 0.5)
+          ];
+
+          const lineEntity = viewer.entities.add({
+            id: `alignment-offset-${b.id}`,
+            name: `${b.name} Optical Parallax Vector (${offsetDist.toFixed(1)}m)`,
+            polyline: {
+              positions: vectorPositions,
+              width: 3,
+              material: new Cesium.PolylineDashMaterialProperty({
+                color: Cesium.Color.fromCssColorString('#f59e0b'),
+                dashLength: 8.0
+              })
+            }
+          });
+          (lineEntity as any).laBuildingData = b;
+          newAlignmentEntities.push(lineEntity);
+        }
+      }
+    }
+
+    // Also render any raw yoloDetections that don't yet have matched buildings
+    if (showYolo && yoloDetections && yoloDetections.length > 0) {
+      yoloDetections.forEach((det) => {
+        if (!det.maskGeoCoords || det.maskGeoCoords.length < 3) return;
+        const coords = det.maskGeoCoords;
+        const groundAlt = 72.0 + 0.12;
+
+        const rawEntity = viewer.entities.add({
+          id: `raw-yolo-det-${det.detectionId}`,
+          name: `YOLO Detection ${det.detectionId} (${Math.round(det.confidence * 100)}%)`,
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(
+              coords.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, groundAlt))
+            ),
+            material: Cesium.Color.fromCssColorString('#ec4899').withAlpha(0.2),
+            outline: true,
+            outlineColor: Cesium.Color.fromCssColorString('#ec4899').withAlpha(0.7),
+            outlineWidth: 1.5,
+            height: groundAlt
+          }
+        });
+        newYoloEntities.push(rawEntity);
+      });
+    }
+
+    yoloEntitiesRef.current = newYoloEntities;
+    alignmentEntitiesRef.current = newAlignmentEntities;
+
+    return () => {
+      if (viewer && !viewer.isDestroyed()) {
+        newYoloEntities.forEach((e) => {
+          try {
+            viewer.entities.remove(e);
+          } catch {}
+        });
+        newAlignmentEntities.forEach((e) => {
+          try {
+            viewer.entities.remove(e);
+          } catch {}
+        });
+      }
+    };
+  }, [activeDataset, laMetadata, layers.yoloSegmentation, layers.alignmentValidation, yoloDetections]);
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || !targetFlyLocation) return;

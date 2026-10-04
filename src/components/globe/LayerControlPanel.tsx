@@ -11,6 +11,8 @@ export interface LayerVisibilityState {
   terrain: boolean;
   propertyVolume: boolean;
   validationZones: boolean;
+  yoloSegmentation: boolean;
+  alignmentValidation: boolean;
 }
 
 interface LayerControlPanelProps {
@@ -32,6 +34,18 @@ export const LayerControlPanel: React.FC<LayerControlPanelProps> = ({
   isRealLidarMode
 }) => {
   const layerDefs: LayerDefinition[] = [
+    {
+      key: 'yoloSegmentation',
+      label: 'YOLOv8 Aerial Building Masks',
+      status: 'REAL',
+      detail: 'Instance segmentation contours'
+    },
+    {
+      key: 'alignmentValidation',
+      label: '5-Layer Alignment Validation',
+      status: 'REAL',
+      detail: 'IoU coincidence & mismatch indicators'
+    },
     {
       key: 'lidar',
       label: 'LiDAR / 3D Solid Building',

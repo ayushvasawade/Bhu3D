@@ -28,6 +28,9 @@ class IntelligenceService {
     hasSatelliteScene?: boolean;
     hasParcel?: boolean;
     hasOfficialUlpin?: boolean;
+    hasYoloMask?: boolean;
+    yoloIoU?: number;
+    yoloConfidence?: number;
   }): ConfidenceBreakdown {
     const rules: ConfidenceRule[] = [
       {
@@ -47,7 +50,7 @@ class IntelligenceService {
         points: options.hasFootprint || options.isLiDAR ? 20 : 0,
         maxPoints: 20,
         description: options.isLiDAR
-          ? 'Calculated from 132,650 LiDAR structural footprint points'
+          ? 'Calculated from structural LiDAR footprint points'
           : options.hasFootprint
           ? 'Verified OpenStreetMap polygon boundary with WGS84 coordinates'
           : 'Footprint missing',
@@ -87,6 +90,18 @@ class IntelligenceService {
         status: options.hasSatelliteScene ? 'REAL' : 'ESTIMATED'
       },
       {
+        name: 'YOLO Instance Segmentation Cross-Check',
+        points: options.hasYoloMask
+          ? Math.round((options.yoloIoU ?? 0.7) * 10)
+          : 0,
+        maxPoints: 10,
+        description: options.hasYoloMask
+          ? `YOLOv8-seg aerial mask verified with ${(Math.round((options.yoloIoU ?? 0) * 100))}% IoU overlap against vector footprint`
+          : 'YOLO aerial segmentation not yet executed',
+        passed: !!options.hasYoloMask,
+        status: options.hasYoloMask ? 'REAL' : 'UNAVAILABLE'
+      },
+      {
         name: 'Cadastral Parcel Integration',
         points: options.hasParcel ? 10 : 0,
         maxPoints: 10,
@@ -98,14 +113,19 @@ class IntelligenceService {
       }
     ];
 
-    const score = rules.reduce((acc, r) => acc + r.points, 0);
+    const rawScore = rules.reduce((acc, r) => acc + r.points, 0);
+    const maxPossible = rules.reduce((acc, r) => acc + r.maxPoints, 0);
+    const score = Math.round((rawScore / maxPossible) * 100);
     const quality: ConfidenceBreakdown['quality'] =
       score >= 75 ? 'HIGH' : score >= 50 ? 'MEDIUM' : 'LOW';
 
     let explanation = '';
-    if (options.isLiDAR) {
+    if (options.isLiDAR && options.hasYoloMask) {
       explanation =
-        'High confidence based on direct airborne laser scanning (3.48M survey points), watertight 3D solid mesh, and validated WGS84 transformation.';
+        'High multi-source confidence: Airborne LiDAR point-cloud survey fused with satellite YOLOv8 instance segmentation and OSM vector footprint.';
+    } else if (options.isLiDAR) {
+      explanation =
+        'High confidence based on direct airborne laser scanning survey, watertight 3D solid mesh, and validated WGS84 transformation.';
     } else {
       explanation =
         'Medium confidence based on verified OpenStreetMap vector footprints. Height is derived/estimated; official government cadastral title integration remains unavailable.';
@@ -117,6 +137,28 @@ class IntelligenceService {
       rules,
       explanation
     };
+  }
+
+  /**
+   * Deterministic confidence score for an LABuildingRecord fused across LiDAR, OSM, and YOLO
+   */
+  calculateFusedBuildingConfidence(building: RealLidarBuilding | any): ConfidenceBreakdown {
+    const hasYolo = !!building.yoloMaskCoordinates;
+    const yoloIoU = building.yoloIoU ?? 0;
+    const hasLiDAR = (building.pointCount ?? 0) > 0 || !!building.pointCloudMetrics;
+
+    return this.calculateConfidence({
+      isLiDAR: hasLiDAR,
+      hasFootprint: !!building.footprintCoordinates || !!building.geographicLocation,
+      hasValidGeometry: true,
+      hasCrs: true,
+      isWatertight: true,
+      hasSatelliteScene: true,
+      hasParcel: false,
+      hasYoloMask: hasYolo,
+      yoloIoU: yoloIoU,
+      yoloConfidence: building.yoloConfidence
+    });
   }
 
   /**

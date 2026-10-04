@@ -12,7 +12,9 @@ import {
   CheckCircle2,
   Activity,
   MapPin,
-  Sparkles
+  Sparkles,
+  Scan,
+  Cpu
 } from 'lucide-react';
 import {
   LADatasetMetadata,
@@ -41,6 +43,10 @@ interface LAControlCardProps {
   onChangePointCloudOptions: (options: Partial<PointCloudRenderOptions>) => void;
   onFlyToPreset?: (preset: 'overview' | 'laPublicWorks' | 'theEden' | 'topDown' | 'street') => void;
   onResetCamera?: () => void;
+  onRunYoloSegmentation?: () => void;
+  onOpenAlignmentPanel?: () => void;
+  onOpenDebugValidation?: () => void;
+  isYoloRunning?: boolean;
 }
 
 export const LAControlCard: React.FC<LAControlCardProps> = ({
@@ -60,7 +66,11 @@ export const LAControlCard: React.FC<LAControlCardProps> = ({
   pointCloudOptions,
   onChangePointCloudOptions,
   onFlyToPreset,
-  onResetCamera
+  onResetCamera,
+  onRunYoloSegmentation,
+  onOpenAlignmentPanel,
+  onOpenDebugValidation,
+  isYoloRunning = false
 }) => {
   const buildings = metadata?.buildings || [];
 
@@ -246,6 +256,49 @@ export const LAControlCard: React.FC<LAControlCardProps> = ({
             </option>
           ))}
         </select>
+      </div>
+
+      {/* 5b. YOLOv8 Segmentation & Convergence Matrix */}
+      <div className="mb-2.5 p-2 rounded-2xl bg-gradient-to-r from-pink-950/30 to-indigo-950/30 border border-pink-500/30 space-y-1.5">
+        <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wider text-pink-300 font-bold">
+          <span className="flex items-center gap-1">
+            <Scan className="w-3 h-3 text-pink-400" />
+            <span>YOLOv8 Aerial Fusion</span>
+          </span>
+          <span className="px-1.5 py-0.2 rounded bg-pink-500/20 text-pink-300 border border-pink-500/40 text-[8px]">
+            AI VALIDATION
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-1 text-[10px] font-semibold">
+          {onRunYoloSegmentation && (
+            <button
+              onClick={onRunYoloSegmentation}
+              disabled={isYoloRunning}
+              className="py-1.5 px-2 rounded-xl bg-pink-600/30 hover:bg-pink-600/50 border border-pink-500/40 text-pink-200 flex items-center justify-center gap-1 transition-all disabled:opacity-50"
+            >
+              <Scan className="w-3 h-3 text-pink-300" />
+              <span>{isYoloRunning ? 'Segmenting...' : 'Segment View'}</span>
+            </button>
+          )}
+          {onOpenAlignmentPanel && (
+            <button
+              onClick={onOpenAlignmentPanel}
+              className="py-1.5 px-2 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 flex items-center justify-center gap-1 transition-all"
+            >
+              <Layers className="w-3 h-3 text-indigo-300" />
+              <span>5-Layer Matrix</span>
+            </button>
+          )}
+        </div>
+        {onOpenDebugValidation && (
+          <button
+            onClick={onOpenDebugValidation}
+            className="w-full py-1.5 px-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-mono text-[9px] flex items-center justify-center gap-1.5 transition-all font-semibold"
+          >
+            <Activity className="w-3 h-3 text-amber-400" />
+            <span>Open E2E Validation &amp; Debug Mode</span>
+          </button>
+        )}
       </div>
 
       {/* 6. Camera Viewpoints */}
