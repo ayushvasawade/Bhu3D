@@ -1,87 +1,53 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box } from 'lucide-react';
 import { Navbar } from './components/layout/Navbar';
-import { FooterHUD } from './components/layout/FooterHUD';
+import { LeftSidebar, LayerVisibilityState } from './components/layout/LeftSidebar';
 import { CesiumViewer } from './components/globe/CesiumViewer';
-import { BuildingInfoCard } from './components/globe/BuildingInfoCard';
-import { GeospatialPipelineStatusPanel } from './components/pipeline/GeospatialPipelineStatusPanel';
-import { SatelliteDataPanel } from './components/pipeline/SatelliteDataPanel';
-import { PropertySearchCard, SearchResultItem } from './components/search/PropertySearchCard';
-import { ViewLevelNav } from './components/search/ViewLevelNav';
-import { PropertyIntelligencePanel } from './components/property/PropertyIntelligencePanel';
-import { RealLidarControlCard } from './components/lidar/RealLidarControlCard';
-import { RealLidarBuildingCard } from './components/lidar/RealLidarBuildingCard';
-import { LAControlCard } from './components/lidar/LAControlCard';
 import { LABuildingCard } from './components/lidar/LABuildingCard';
-import { RealLidarProvenancePanel } from './components/lidar/RealLidarProvenancePanel';
-import { RealLidarSideBySideModal } from './components/lidar/RealLidarSideBySideModal';
-import { RealLidarMeshInspectorModal } from './components/lidar/RealLidarMeshInspectorModal';
-import { LayerControlPanel, LayerVisibilityState } from './components/globe/LayerControlPanel';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { DataProvenanceBadge } from './components/common/DataProvenanceBadge';
-import { PropertyPassportModal } from './components/modals/PropertyPassportModal';
-import { AboutModal } from './components/modals/AboutModal';
-import { HowItWorksModal } from './components/modals/HowItWorksModal';
-import { DataSourcesModal } from './components/modals/DataSourcesModal';
-import { Fullscreen3DModal } from './components/modals/Fullscreen3DModal';
-import { DEMO_PROPERTIES } from './data/demoProperties';
-import { PropertyRecord, ViewLevel, DataSourceItem } from './types/property';
-import { BuildingFootprint, Parcel, PipelineStatus } from './types/geospatial';
 import {
-  RealLidarBuilding,
-  LidarViewMode,
-  LidarCompareSubMode,
-  PointCloudRenderOptions,
-  LidarCameraPreset,
-  LidarDatasetId,
   LABuildingRecord,
   LADatasetMetadata,
-  FloorInspectionOptions
+  FloorInspectionOptions,
+  PointCloudRenderOptions
 } from './types/lidar';
-import { PropertyPassportData, PrototypeRole } from './types/intelligence';
-import * as Cesium from 'cesium';
-import { geospatialService } from './services/geospatialDataService';
-import { realBuildingDataService } from './services/realBuildingDataService';
+import { YoloBuildingDetection } from './types/yolo';
 import { lidarService } from './services/lidarService';
-import { copernicusService } from './services/copernicusService';
-import { intelligenceService } from './services/intelligenceService';
 import { yoloService } from './services/yoloSegmentationService';
 import { buildingFusionService } from './services/buildingFusionService';
-import { BuildingAlignmentPanel } from './components/lidar/BuildingAlignmentPanel';
-import { YoloDebugValidationModal } from './components/lidar/YoloDebugValidationModal';
-import {
-  YoloBuildingDetection,
-  YoloProcessingStatus,
-  FusedBuildingIdentity,
-  AlignmentValidation
-} from './types/yolo';
+import * as Cesium from 'cesium';
 
 export function App() {
-  // Mode selection: Real LiDAR Demonstration (Default & Primary) vs Conceptual Indian Cadastre Sandbox
-  const [isRealLidarMode, setIsRealLidarMode] = useState<boolean>(true);
-  const [activeDataset, setActiveDataset] = useState<LidarDatasetId>('la_south_park');
-  const [realLidarMetadata, setRealLidarMetadata] = useState<RealLidarBuilding | null>(null);
-  const [laMetadata, setLaMetadata] = useState<LADatasetMetadata | null>(null);
-  const [selectedRealBuilding, setSelectedRealBuilding] = useState<RealLidarBuilding | null>(null);
-  const [selectedLABuilding, setSelectedLABuilding] = useState<LABuildingRecord | null>(null);
-  const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
-  const [cameraPreset, setCameraPreset] = useState<LidarCameraPreset>('overview');
-  const [isProvenancePanelOpen, setIsProvenancePanelOpen] = useState<boolean>(true);
-  const [isMeshInspectorOpen, setIsMeshInspectorOpen] = useState<boolean>(false);
+  // Theme state
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
-  // Real LiDAR Pipeline & Comparison States
-  const [lidarViewMode, setLidarViewMode] = useState<LidarViewMode>('reconstruction');
-  const [compareSubMode, setCompareSubMode] = useState<LidarCompareSubMode>('overlay');
-  const [pointCloudOptions, setPointCloudOptions] = useState<PointCloudRenderOptions>({
+  // Metadata & Selection States
+  const [laMetadata, setLaMetadata] = useState<LADatasetMetadata | null>(null);
+  const [selectedBuilding, setSelectedBuilding] = useState<LABuildingRecord | null>(null);
+  const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
+
+  // Default Layer Visibility (Phase 7 Requirements)
+  // Satellite ✓, LiDAR ✓, OSM ✓, 3D Mesh ✗, YOLO ✗, Validation ✗, Floor Volumes ✗
+  const [layers, setLayers] = useState<LayerVisibilityState>({
+    satellite: true,
+    lidar: true,
+    osm: true,
+    reconstruction: false,
+    yolo: false,
+    validation: false,
+    floorVolumes: false,
+    terrain: false
+  });
+
+  // Point Cloud Options
+  const [pointCloudOptions] = useState<PointCloudRenderOptions>({
     pointSize: 3,
     colorMode: 'rgb',
     densityPercentage: 100,
     buildingOnly: false,
     meshOpacity: 0.65
   });
-  const [isSideBySideOpen, setIsSideBySideOpen] = useState<boolean>(false);
 
-  // 3D Floor Inspection & Exploded View Options
+  // Floor Inspection Options
   const [floorInspectionOptions, setFloorInspectionOptions] = useState<FloorInspectionOptions>({
     isInspectionMode: false,
     isExplodedView: false,
@@ -89,847 +55,178 @@ export function App() {
     floorHeightAssumption: 3.5
   });
 
-  // Conceptual Cadastre Sandbox state
-  const [properties] = useState<PropertyRecord[]>(DEMO_PROPERTIES);
-  const [currentProperty, setCurrentProperty] = useState<PropertyRecord>(DEMO_PROPERTIES[0]);
-  const [viewLevel, setViewLevel] = useState<ViewLevel>('buildings');
-  const [activeTab, setActiveTab] = useState<'explore' | 'about' | 'datasources' | 'howitworks'>('explore');
-  const [isDarkMode, setIsDarkMode] = useState(true);
-
-  // Geospatial Pipeline & Real Datasets
-  const [allBuildings, setAllBuildings] = useState<BuildingFootprint[]>([]);
-  const [allParcels, setAllParcels] = useState<Parcel[]>([]);
-  const [selectedBuilding, setSelectedBuilding] = useState<BuildingFootprint | null>(null);
-  const [pipelineStatus] = useState<PipelineStatus>(() => geospatialService.getPipelineStatus());
-  const [sentinelScene, setSentinelScene] = useState<any>(null);
-
-  // Layer Visibility State
-  const [layers, setLayers] = useState<LayerVisibilityState>({
-    lidar: true,
-    osmBuildings: true,
-    parcels: true,
-    satellite: true,
-    terrain: false,
-    propertyVolume: true,
-    validationZones: true,
-    yoloSegmentation: true,
-    alignmentValidation: true
-  });
-  const [showLayerPanel, setShowLayerPanel] = useState<boolean>(false);
-
-  // YOLO Segmentation & 5-Layer Convergence States
+  // YOLO Runtime Detections State (only populated on actual inference)
   const [yoloDetections, setYoloDetections] = useState<YoloBuildingDetection[]>([]);
-  const [fusedIdentities, setFusedIdentities] = useState<FusedBuildingIdentity[]>([]);
-  const [yoloStatus, setYoloStatus] = useState<YoloProcessingStatus>({
-    stage: 'IDLE',
-    progress: 1.0,
-    message: 'YOLOv8-seg Engine Ready',
-    detectionCount: 0,
-    matchedCount: 0,
-    processingTimeMs: 0,
-    error: null
-  });
-  const [isAlignmentPanelOpen, setIsAlignmentPanelOpen] = useState<boolean>(false);
-  const [selectedAlignment, setSelectedAlignment] = useState<AlignmentValidation | null>(null);
-  const [isDebugModalOpen, setIsDebugModalOpen] = useState<boolean>(false);
-  const cesiumViewerInstanceRef = useRef<Cesium.Viewer | null>(null);
+  const [isYoloRunning, setIsYoloRunning] = useState<boolean>(false);
 
+  // Vertical Placement Audit Debug Panel Toggle
+  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState<boolean>(false);
+
+  const cesiumViewerRef = useRef<Cesium.Viewer | null>(null);
+
+  // Load Real USGS 3DEP LiDAR Dataset on Initial Mount
   useEffect(() => {
-    yoloService.setStatusListener((st) => setYoloStatus(st));
-  }, []);
-
-  // Prototype Role State
-  const [currentRole, setCurrentRole] = useState<PrototypeRole>('survey_officer');
-
-  // Search Camera Target
-  const [targetFlyLocation, setTargetFlyLocation] = useState<{
-    latitude: number;
-    longitude: number;
-    altitude?: number;
-  } | null>(null);
-
-  // Modals state
-  const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isHowItWorksOpen, setIsHowItWorksOpen] = useState(false);
-  const [isDataSourcesOpen, setIsDataSourcesOpen] = useState(false);
-  const [isFullscreen3DOpen, setIsFullscreen3DOpen] = useState(false);
-  const [passportModalData, setPassportModalData] = useState<PropertyPassportData | null>(null);
-
-  // Real-time HUD telemetry state (Defaults to Los Angeles USGS coordinates)
-  const [telemetry, setTelemetry] = useState({
-    latitude: 34.037095,
-    longitude: -118.260903,
-    altitude: 420,
-    heading: 0
-  });
-
-  // Load real LiDAR metadata & OSM data on initial mount
-  useEffect(() => {
-    // 1. Fetch LA USGS 3DEP LiDAR dataset metadata & perform initial multi-layer fusion
     lidarService.getLAMetadata()
       .then((data) => {
-        // Initial visual YOLO detection instances reflecting aerial perspectives
-        const initialDetections: YoloBuildingDetection[] = data.buildings.map((bldg, idx) => {
-          const coords = bldg.footprintCoordinates || [];
-          const maskGeo = coords.map(([lon, lat]): [number, number] => [
-            lon + (idx % 2 === 0 ? 0.000014 : -0.000010),
-            lat + (idx % 3 === 0 ? 0.000016 : -0.000012)
-          ]);
-          return {
-            detectionId: `YOLO-INIT-${bldg.id}`,
-            classId: 0,
-            classLabel: 'building',
-            confidence: Math.round((0.85 + (idx % 12) * 0.01) * 100) / 100,
-            bboxNormalized: [0, 0, 1, 1],
-            bboxPixels: [0, 0, 100, 100],
-            maskPixelCoords: [],
-            maskGeoCoords: maskGeo,
-            maskAreaPixels: bldg.footprintAreaSqM * 2,
-            maskAreaSqM: Math.round(bldg.footprintAreaSqM * 1.04 * 10) / 10,
-            centroidGeo: [bldg.center.longitude, bldg.center.latitude],
-            imageTileExtent: [-118.267, 34.032, -118.254, 34.043],
-            imageSize: [640, 640]
-          };
-        });
-
-        const fusionResult = buildingFusionService.matchDetectionsToBuildings(
-          initialDetections,
-          data.buildings
-        );
-
-        setYoloDetections(initialDetections);
-        setFusedIdentities(fusionResult.fusedBuildings);
-        setLaMetadata({
-          ...data,
-          buildings: fusionResult.updatedBuildings
-        });
+        setLaMetadata(data);
       })
       .catch((err) => {
         console.error('[App] Failed to load LA USGS LiDAR metadata:', err);
       });
-
-    // 2. Fetch Utah Capitol metadata
-    realBuildingDataService.getRealBuilding()
-      .then((data) => {
-        setRealLidarMetadata(data);
-      })
-      .catch((err) => {
-        console.error('[App] Failed to load real LiDAR building data:', err);
-      });
-
-    // Ingest real OSM footprints & parcels
-    geospatialService.getBuildingFootprints('pune')
-      .then((blds) => setAllBuildings(blds))
-      .catch((err) => console.error('[App] Failed to load OSM buildings:', err));
-
-    geospatialService.getParcelData('pune')
-      .then((prcs) => setAllParcels(prcs))
-      .catch((err) => console.error('[App] Failed to load cadastral parcels:', err));
-
-    // Ingest Copernicus satellite scene
-    copernicusService.searchSentinel2({ tileId: 'T43QDA', limit: 1 })
-      .then((scenes) => {
-        if (scenes.length > 0) setSentinelScene(scenes[0]);
-      })
-      .catch((err) => console.warn('[App] Copernicus query:', err));
   }, []);
 
-  const handleSelectProperty = (property: PropertyRecord) => {
-    setCurrentProperty(property);
-    setSelectedBuilding(null);
-    setViewLevel('city');
-  };
+  // Layer Visibility Toggle Handler
+  const handleToggleLayer = (key: keyof LayerVisibilityState) => {
+    setLayers((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
 
-  const handleLevelSelect = (level: ViewLevel) => {
-    setViewLevel(level);
-    if (level === 'global' || level === 'city') {
-      setSelectedBuilding(null);
-      setSelectedRealBuilding(null);
-    }
-  };
-
-  const handleSelectSource = (_source: DataSourceItem) => {
-    setIsDataSourcesOpen(true);
-  };
-
-  const handleToggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    if (document.documentElement.classList.contains('dark')) {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-    }
-  };
-
-  const handleBuildingClick = (building: BuildingFootprint | null) => {
-    setSelectedBuilding(building);
-    if (building) {
-      setViewLevel('buildings');
-      setIsProvenancePanelOpen(true);
-    }
-  };
-
-  const handleViewPropertyFromBuilding = (associatedPropertyId?: string) => {
-    if (associatedPropertyId) {
-      const match = properties.find((p) => p.id === associatedPropertyId);
-      if (match) {
-        setCurrentProperty(match);
+      // If enabling YOLO layer and no detections exist yet, trigger real inference
+      if (key === 'yolo' && next.yolo && yoloDetections.length === 0 && !isYoloRunning) {
+        handleRunYoloSegmentation();
       }
-    }
-    setSelectedBuilding(null);
-    setViewLevel('ownership');
+
+      return next;
+    });
   };
 
-  // Unified Search Selection Handler
-  const handleSearchResult = (result: SearchResultItem) => {
-    if (result.type === 'lidar') {
-      setIsRealLidarMode(true);
-      setSelectedBuilding(null);
-      if (result.rawData?.levels) {
-        // LA USGS 3DEP building selected
-        setActiveDataset('la_south_park');
-        setSelectedLABuilding(result.rawData as LABuildingRecord);
-        setSelectedRealBuilding(null);
-        setSelectedFloor(null);
-      } else {
-        // Utah Capitol selected
-        setActiveDataset('utah_capitol');
-        setSelectedRealBuilding(realLidarMetadata);
-        setSelectedLABuilding(null);
-        setSelectedFloor(null);
-      }
-      setIsProvenancePanelOpen(true);
-      setCameraPreset('overview');
-      setTargetFlyLocation({
-        latitude: result.coordinates.latitude,
-        longitude: result.coordinates.longitude,
-        altitude: result.coordinates.altitude || 380
-      });
-    } else if (result.type === 'osm_building') {
-      setIsRealLidarMode(false);
-      setSelectedRealBuilding(null);
-      setSelectedLABuilding(null);
-      const bld = result.rawData as BuildingFootprint;
-      setSelectedBuilding(bld);
-      setIsProvenancePanelOpen(true);
-      setViewLevel('buildings');
-      setTargetFlyLocation({
-        latitude: result.coordinates.latitude,
-        longitude: result.coordinates.longitude,
-        altitude: 450
-      });
-    } else if (result.type === 'parcel') {
-      setIsRealLidarMode(false);
-      setSelectedRealBuilding(null);
-      setSelectedLABuilding(null);
-      setViewLevel('layers');
-      setTargetFlyLocation({
-        latitude: result.coordinates.latitude,
-        longitude: result.coordinates.longitude,
-        altitude: 550
-      });
-    } else if (result.type === 'demo_lab') {
-      setIsRealLidarMode(false);
-      setSelectedRealBuilding(null);
-      setSelectedLABuilding(null);
-      const prop = result.rawData as PropertyRecord;
-      setCurrentProperty(prop);
-      setViewLevel('ownership');
-      setIsProvenancePanelOpen(true);
-      setTargetFlyLocation({
-        latitude: result.coordinates.latitude,
-        longitude: result.coordinates.longitude,
-        altitude: 320
-      });
-    }
-  };
-
+  // Run Real YOLO Segmentation on satellite aerial image
   const handleRunYoloSegmentation = async () => {
-    const viewer = cesiumViewerInstanceRef.current;
-    if (!viewer || !laMetadata?.buildings) return;
+    if (!laMetadata?.buildings || isYoloRunning) return;
+    setIsYoloRunning(true);
 
     try {
-      const canvas = viewer.canvas;
-      let extent: [number, number, number, number] = [-118.267, 34.032, -118.254, 34.043];
-      const rect = viewer.camera.computeViewRectangle(viewer.scene.globe.ellipsoid);
-      if (rect) {
-        extent = [
-          Cesium.Math.toDegrees(rect.west),
-          Cesium.Math.toDegrees(rect.south),
-          Cesium.Math.toDegrees(rect.east),
-          Cesium.Math.toDegrees(rect.north)
-        ];
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = '/data/south_park_satellite.png';
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load aerial satellite tile'));
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || 640;
+      canvas.height = img.naturalHeight || 640;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
       }
+
+      // LA South Park Geographic Extent
+      const extent: [number, number, number, number] = [
+        laMetadata.location.sw.longitude,
+        laMetadata.location.sw.latitude,
+        laMetadata.location.ne.longitude,
+        laMetadata.location.ne.latitude
+      ];
 
       const detections = await yoloService.segmentBuildings(canvas, extent);
       setYoloDetections(detections);
 
-      const fusionResult = buildingFusionService.matchDetectionsToBuildings(
-        detections,
-        laMetadata.buildings
-      );
+      // Perform real polygon geometric matching against OSM footprints
+      if (detections.length > 0) {
+        const fusionResult = buildingFusionService.matchDetectionsToBuildings(
+          detections,
+          laMetadata.buildings
+        );
 
-      setFusedIdentities(fusionResult.fusedBuildings);
-      setLaMetadata((prev) =>
-        prev
-          ? {
-              ...prev,
-              buildings: fusionResult.updatedBuildings
-            }
-          : prev
-      );
+        setLaMetadata({
+          ...laMetadata,
+          buildings: fusionResult.updatedBuildings
+        });
 
-      if (selectedLABuilding) {
-        const updated = fusionResult.updatedBuildings.find((b) => b.id === selectedLABuilding.id);
-        if (updated) {
-          setSelectedLABuilding(updated);
-          const val = buildingFusionService.validateBuildingAlignment(
-            updated,
-            detections.find((d) => d.detectionId === `YOLO-DET-${updated.id}`) || null
-          );
-          setSelectedAlignment(val);
+        // Update selected building if one is currently active
+        if (selectedBuilding) {
+          const updated = fusionResult.updatedBuildings.find((b) => b.id === selectedBuilding.id);
+          if (updated) setSelectedBuilding(updated);
         }
       }
-
-      setIsAlignmentPanelOpen(true);
-    } catch (err: any) {
-      console.error('[App] YOLO segmentation failed:', err);
+    } catch (err) {
+      console.warn('[App] Real YOLO inference notice:', err);
+    } finally {
+      setIsYoloRunning(false);
     }
   };
 
-  const handleToggleLayer = (key: keyof LayerVisibilityState) => {
-    setLayers((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black text-white select-none">
-      {/* 1. Main Background: Fullscreen Interactive CesiumJS Globe */}
-      <div className="absolute inset-0 z-0">
-        <ErrorBoundary fallbackTitle="3D Globe Viewport Notice" fallbackMessage="Cesium WebGL rendering encountered a canvas initialization issue.">
+    <ErrorBoundary>
+      <div className={`relative w-screen h-screen overflow-hidden ${isDarkMode ? 'dark bg-zinc-950 text-white' : 'bg-zinc-100 text-zinc-900'}`}>
+        {/* Top Minimal Navigation Bar */}
+        <Navbar
+          isDarkMode={isDarkMode}
+          onToggleTheme={() => setIsDarkMode(!isDarkMode)}
+        />
+
+        {/* Center: Cesium 3D Globe Viewer */}
+        <main className="absolute inset-0 z-0">
           <CesiumViewer
-            currentProperty={currentProperty}
-            viewLevel={viewLevel}
-            selectedBuilding={selectedBuilding}
-            onSelectBuilding={handleBuildingClick}
-            isRealLidarMode={isRealLidarMode}
-            activeDataset={activeDataset}
-            realLidarMetadata={realLidarMetadata}
             laMetadata={laMetadata}
-            cameraPreset={cameraPreset}
-            selectedRealBuilding={selectedRealBuilding}
-            onSelectRealBuilding={(bld) => {
-              setSelectedRealBuilding(bld);
-              if (bld) {
-                setIsProvenancePanelOpen(true);
-              }
-            }}
-            selectedLABuilding={selectedLABuilding}
-            onSelectLABuilding={(bld) => {
-              setSelectedLABuilding(bld);
-              setSelectedFloor(null);
-              setIsProvenancePanelOpen(true);
-              if (bld) {
-                const val = buildingFusionService.validateBuildingAlignment(bld, null);
-                setSelectedAlignment(val);
-              } else {
-                setSelectedAlignment(null);
-              }
-            }}
+            selectedBuilding={selectedBuilding}
+            onSelectBuilding={setSelectedBuilding}
             selectedFloor={selectedFloor}
             floorInspectionOptions={floorInspectionOptions}
-            onCameraChange={(cam) => {
-              setTelemetry({
-                latitude: cam.latitude,
-                longitude: cam.longitude,
-                altitude: cam.altitude,
-                heading: cam.heading
-              });
-            }}
             layers={layers}
-            targetFlyLocation={targetFlyLocation}
-            lidarViewMode={lidarViewMode}
-            compareSubMode={compareSubMode}
             pointCloudOptions={pointCloudOptions}
             yoloDetections={yoloDetections}
-            onViewerReady={(v) => {
-              cesiumViewerInstanceRef.current = v;
-            }}
+            onViewerReady={(v) => { cesiumViewerRef.current = v; }}
+            isDebugPanelOpen={isDebugPanelOpen}
+            onCloseDebugPanel={() => setIsDebugPanelOpen(false)}
           />
-        </ErrorBoundary>
-      </div>
+        </main>
 
-      {/* 2. Top Header Navigation Bar with Role Selector */}
-      <Navbar
-        activeTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'explore') {
-            setIsAboutOpen(false);
-            setIsHowItWorksOpen(false);
-            setIsDataSourcesOpen(false);
-          }
-        }}
-        isDarkMode={isDarkMode}
-        onToggleTheme={handleToggleTheme}
-        onOpenAbout={() => setIsAboutOpen(true)}
-        onOpenHowItWorks={() => setIsHowItWorksOpen(true)}
-        onOpenDataSources={() => setIsDataSourcesOpen(true)}
-        currentRole={currentRole}
-        onSelectRole={setCurrentRole}
-      />
-
-      {/* 2b. Floating Mode Navigation Bar for Utah State Capitol Real LiDAR */}
-      {isRealLidarMode && (
-        <div className="absolute top-[72px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto hidden md:flex items-center gap-1 p-1 rounded-2xl bg-zinc-950/95 border border-zinc-800 backdrop-blur-xl shadow-2xl animate-fadeIn">
-          <button
-            onClick={() => setLidarViewMode('scan')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              lidarViewMode === 'scan'
-                ? 'bg-white text-black shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
-            <span>SCAN</span>
-            <span
-              className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
-                lidarViewMode === 'scan' ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}
-            >
-              REAL
-            </span>
-          </button>
-
-          <button
-            onClick={() => setLidarViewMode('reconstruction')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              lidarViewMode === 'reconstruction'
-                ? 'bg-white text-black shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
-            <span>3D MESH</span>
-            <span
-              className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
-                lidarViewMode === 'reconstruction' ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}
-            >
-              DERIVED
-            </span>
-          </button>
-
-          <button
-            onClick={() => setLidarViewMode('compare')}
-            className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
-              lidarViewMode === 'compare'
-                ? 'bg-white text-black shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-            <span>COMPARE</span>
-            <span
-              className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
-                lidarViewMode === 'compare' ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}
-            >
-              AUDIT
-            </span>
-          </button>
-
-          <div className="w-px h-3.5 bg-zinc-800 my-auto mx-0.5" />
-
-          {activeDataset === 'utah_capitol' ? (
-            <button
-              onClick={() => setIsMeshInspectorOpen(true)}
-              className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900 border border-zinc-800/80 whitespace-nowrap"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
-              <span>INSPECTOR &amp; QC</span>
-              <span className="text-[9px] px-1 py-0.2 rounded font-semibold bg-zinc-800 text-zinc-400">
-                METRICS
-              </span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono text-zinc-300 bg-zinc-900/60 border border-zinc-800/60 whitespace-nowrap">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
-              <span className="text-[11px] font-semibold text-white">USGS LA 3DEP</span>
-              <span className="text-[9px] px-1 py-0.2 rounded font-mono bg-cyan-950 text-cyan-400 border border-cyan-800/60">
-                129 Meshes
-              </span>
-            </div>
-          )}
+        {/* Left Sidebar: DATA, ANALYSIS, CADASTRE (Phase 7 Design) */}
+        <div className="absolute top-18 left-5 z-20 pointer-events-auto">
+          <LeftSidebar
+            layers={layers}
+            onToggleLayer={handleToggleLayer}
+            buildings={laMetadata?.buildings || []}
+            selectedBuilding={selectedBuilding}
+            onSelectBuilding={setSelectedBuilding}
+            onToggleDebugPanel={() => setIsDebugPanelOpen(!isDebugPanelOpen)}
+            isDebugPanelOpen={isDebugPanelOpen}
+            onRunYolo={handleRunYoloSegmentation}
+            isYoloRunning={isYoloRunning}
+          />
         </div>
-      )}
 
-      {/* 3. Floating Left Sidebar: Mode Switcher, Real Search, Telemetry & Layer Control */}
-      <aside
-        aria-label="LiDAR and Cadastre Navigation"
-        className="absolute top-20 left-4 bottom-24 z-20 flex flex-col space-y-2 pointer-events-none w-72 sm:w-80 max-w-[325px] max-h-[calc(100vh-11.5rem)] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1"
-      >
-        {/* Mode & Camera Controls */}
-        {activeDataset === 'la_south_park' ? (
-          <LAControlCard
-            metadata={laMetadata}
-            activeDataset={activeDataset}
-            onSelectDataset={(ds) => {
-              setActiveDataset(ds);
-              setSelectedRealBuilding(null);
-              setSelectedLABuilding(null);
-              setSelectedBuilding(null);
-              setSelectedFloor(null);
-              if (ds === 'la_south_park') {
-                setTargetFlyLocation({ latitude: 34.037095, longitude: -118.260903, altitude: 420 });
-              } else {
-                setTargetFlyLocation({ latitude: 40.7774, longitude: -111.8882, altitude: 380 });
-              }
-            }}
-            isRealLidarMode={isRealLidarMode}
-            onToggleMode={(mode: boolean) => {
-              setIsRealLidarMode(mode);
-              setSelectedRealBuilding(null);
-              setSelectedLABuilding(null);
-              setSelectedBuilding(null);
-              setSelectedFloor(null);
-            }}
-            cameraPreset={cameraPreset}
-            onSelectCameraPreset={(preset: LidarCameraPreset) => {
-              setCameraPreset(preset);
-              if (viewLevel !== 'buildings') {
-                setViewLevel('buildings');
-              }
-            }}
-            lidarViewMode={lidarViewMode}
-            onChangeViewMode={setLidarViewMode}
-            compareSubMode={compareSubMode}
-            onChangeCompareSubMode={setCompareSubMode}
-            pointCloudOptions={pointCloudOptions}
-            onChangePointCloudOptions={(opts) =>
-              setPointCloudOptions((prev) => ({ ...prev, ...opts }))
-            }
-            selectedBuilding={selectedLABuilding}
-            onSelectBuilding={(bld) => {
-              setSelectedLABuilding(bld);
-              setSelectedFloor(null);
-            }}
-            onResetCamera={() => setCameraPreset('overview')}
-            onRunYoloSegmentation={handleRunYoloSegmentation}
-            onOpenAlignmentPanel={() => setIsAlignmentPanelOpen(!isAlignmentPanelOpen)}
-            onOpenDebugValidation={() => setIsDebugModalOpen(true)}
-            isYoloRunning={yoloStatus.stage === 'INFERENCING' || yoloStatus.stage === 'PREPROCESSING'}
-          />
-        ) : (
-          <RealLidarControlCard
-            metadata={realLidarMetadata}
-            isRealLidarMode={isRealLidarMode}
-            onToggleMode={(mode) => {
-              setIsRealLidarMode(mode);
-              setSelectedRealBuilding(null);
-              setSelectedLABuilding(null);
-              setSelectedBuilding(null);
-              setSelectedFloor(null);
-              if (mode) {
-                setIsProvenancePanelOpen(true);
-                setCameraPreset('overview');
-              }
-            }}
-            cameraPreset={cameraPreset}
-            onSelectCameraPreset={(preset) => {
-              setCameraPreset(preset);
-              if (viewLevel !== 'buildings') {
-                setViewLevel('buildings');
-              }
-            }}
-            onOpenProvenance={() => setIsProvenancePanelOpen(!isProvenancePanelOpen)}
-            lidarViewMode={lidarViewMode}
-            onChangeViewMode={setLidarViewMode}
-            compareSubMode={compareSubMode}
-            onChangeCompareSubMode={setCompareSubMode}
-            pointCloudOptions={pointCloudOptions}
-            onChangePointCloudOptions={(opts) =>
-              setPointCloudOptions((prev) => ({ ...prev, ...opts }))
-            }
-            onOpenSideBySide={() => setIsSideBySideOpen(true)}
-            onOpenInspector={() => setIsMeshInspectorOpen(true)}
-            onResetCamera={() => setCameraPreset('overview')}
-          />
-        )}
-
-        {/* Real Geospatial Building & Property Search */}
-        <PropertySearchCard
-          buildings={allBuildings}
-          parcels={allParcels}
-          properties={properties}
-          realLidarMetadata={realLidarMetadata}
-          laMetadata={laMetadata}
-          isRealLidarMode={isRealLidarMode}
-          onSelectResult={handleSearchResult}
-        />
-
-        {/* View Level Breadcrumb Navigation */}
-        <ViewLevelNav
-          currentLevel={viewLevel}
-          onSelectLevel={handleLevelSelect}
-        />
-
-        {/* Layer Controls Toggle Button */}
-        <div className="pointer-events-auto">
-          <button
-            onClick={() => setShowLayerPanel(!showLayerPanel)}
-            className="w-full py-2 px-3 rounded-xl bg-zinc-950/90 hover:bg-zinc-900 border border-zinc-800 text-xs font-semibold text-white flex items-center justify-between transition-colors shadow-lg"
-          >
-            <span>Geospatial Layer Controls</span>
-            <span className="text-[10px] font-mono text-zinc-400">
-              {showLayerPanel ? 'Hide ▲' : 'Show ▼'}
-            </span>
-          </button>
-          {showLayerPanel && (
-            <div className="mt-2 animate-fadeIn">
-              <LayerControlPanel
-                layers={layers}
-                onToggleLayer={handleToggleLayer}
-                isRealLidarMode={isRealLidarMode}
-              />
-            </div>
-          )}
-        </div>
-      </aside>
-
-      {/* 4. Clicked Real LiDAR Building Information Card (Utah) */}
-      {selectedRealBuilding && isRealLidarMode && activeDataset === 'utah_capitol' && (
-        <RealLidarBuildingCard
-          metadata={selectedRealBuilding}
-          onClose={() => setSelectedRealBuilding(null)}
-          onOpenProvenance={() => {
-            setSelectedRealBuilding(null);
-            setIsProvenancePanelOpen(true);
-          }}
-        />
-      )}
-
-      {/* 4b. Clicked Sandbox Building Information Card */}
-      {selectedBuilding && !isRealLidarMode && (
-        <BuildingInfoCard
-          building={selectedBuilding}
-          onClose={() => setSelectedBuilding(null)}
-          onViewProperty={handleViewPropertyFromBuilding}
-        />
-      )}
-
-      {/* 5. Floating Right Sidebar: Real LiDAR Provenance or Cadastre Intelligence */}
-      <aside
-        aria-label="Property and Provenance Information"
-        className="absolute top-20 right-4 bottom-24 z-20 pointer-events-none w-72 sm:w-80 md:w-92 max-w-[370px] max-h-[calc(100vh-11.5rem)] flex flex-col"
-      >
-        {isProvenancePanelOpen && (
-          isRealLidarMode ? (
-            activeDataset === 'la_south_park' ? (
-              selectedLABuilding ? (
-                <LABuildingCard
-                  building={selectedLABuilding}
-                  onClose={() => {
-                    setSelectedLABuilding(null);
-                    setSelectedFloor(null);
-                  }}
-                  selectedFloor={selectedFloor}
-                  onSelectFloor={setSelectedFloor}
-                  floorInspectionOptions={floorInspectionOptions}
-                  onChangeFloorInspectionOptions={(opts) =>
-                    setFloorInspectionOptions((prev) => ({ ...prev, ...opts }))
-                  }
-                  onOpenAlignmentPanel={() => setIsAlignmentPanelOpen(true)}
-                />
-              ) : (
-                <div className="gis-glass-panel rounded-3xl p-5 border border-zinc-800 shadow-2xl pointer-events-auto backdrop-blur-xl text-white">
-                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-2 rounded-xl bg-cyan-950/80 text-cyan-400 border border-cyan-800">
-                        <Box className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider block">USGS 3DEP Survey</span>
-                        <h4 className="text-sm font-bold text-white">DTLA South Park Precinct</h4>
-                      </div>
-                    </div>
-                    <DataProvenanceBadge status="REAL" label="REAL LiDAR" size="sm" />
-                  </div>
-                  <p className="text-xs text-zinc-400 mt-3 leading-relaxed">
-                    Select any of the 129 3D reconstructed buildings from the dropdown or click directly on the 3D globe to inspect real elevation, footprint dimensions, and inferred floor stratification.
-                  </p>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-[11px] font-mono">
-                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
-                      <span className="text-zinc-500 block text-[9px]">SOURCE CRS</span>
-                      <span className="text-white font-bold">EPSG:3857</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
-                      <span className="text-zinc-500 block text-[9px]">DATUM (AMSL)</span>
-                      <span className="text-cyan-400 font-bold">72.17 m</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
-                      <span className="text-zinc-500 block text-[9px]">RAW SURVEY</span>
-                      <span className="text-white font-bold">3.49M pts</span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800">
-                      <span className="text-zinc-500 block text-[9px]">BUILDINGS</span>
-                      <span className="text-white font-bold">129 Meshes</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            ) : (
-              <RealLidarProvenancePanel
-                metadata={realLidarMetadata}
-                onCameraPreset={setCameraPreset}
-                activeCameraPreset={cameraPreset}
-                onClose={() => setIsProvenancePanelOpen(false)}
-                onOpenSideBySide={() => setIsSideBySideOpen(true)}
-                onOpenInspector={() => setIsMeshInspectorOpen(true)}
-              />
-            )
-          ) : (
-            <PropertyIntelligencePanel
+        {/* Right Sidebar: Contextual Building Inspector (ONLY SHOWN WHEN SELECTED) */}
+        {selectedBuilding && (
+          <div className="absolute top-18 right-5 z-20 pointer-events-auto animate-fadeIn">
+            <LABuildingCard
               building={selectedBuilding}
-              realLidarMetadata={realLidarMetadata}
-              isRealLidarMode={isRealLidarMode}
-              property={currentProperty}
-              parcel={allParcels[0] || null}
-              sentinelScene={sentinelScene}
-              onClose={() => setIsProvenancePanelOpen(false)}
-              onOpenPassport={(passport) => setPassportModalData(passport)}
-              onOpenFullscreen3D={() => setIsFullscreen3DOpen(true)}
+              onClose={() => {
+                setSelectedBuilding(null);
+                setSelectedFloor(null);
+              }}
+              onFocusBuilding={(bld) => {
+                if (cesiumViewerRef.current) {
+                  const ground = layers.terrain ? 35.70 : 0.0;
+                  cesiumViewerRef.current.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(
+                      bld.center.longitude,
+                      bld.center.latitude - 0.0018,
+                      ground + bld.derivedHeightMeters + 75
+                    ),
+                    orientation: {
+                      heading: Cesium.Math.toRadians(0),
+                      pitch: Cesium.Math.toRadians(-28),
+                      roll: 0
+                    },
+                    duration: 1.5
+                  });
+                }
+              }}
+              selectedFloor={selectedFloor}
+              onSelectFloor={setSelectedFloor}
+              floorInspectionOptions={floorInspectionOptions}
+              onChangeFloorInspectionOptions={(opts) =>
+                setFloorInspectionOptions((prev) => ({ ...prev, ...opts }))
+              }
             />
-          )
+          </div>
         )}
-      </aside>
-
-      {/* 5b. Floating 5-Layer Alignment & Convergence Matrix Panel */}
-      {isAlignmentPanelOpen && (
-        <div className="absolute top-20 right-4 sm:right-[390px] z-30 w-80 sm:w-96 max-w-[calc(100vw-2rem)] animate-fadeIn pointer-events-auto">
-          <BuildingAlignmentPanel
-            selectedBuilding={selectedLABuilding}
-            alignment={selectedAlignment}
-            yoloStatus={yoloStatus}
-            onRunSegmentation={handleRunYoloSegmentation}
-            onClose={() => setIsAlignmentPanelOpen(false)}
-            isYoloLayerVisible={layers.yoloSegmentation}
-            onToggleYoloLayer={() => handleToggleLayer('yoloSegmentation')}
-            onOpenDebugValidation={() => setIsDebugModalOpen(true)}
-          />
-        </div>
-      )}
-
-      {/* 6. Geospatial Pipeline Processing Status Panel & Satellite Telemetry */}
-      <div className="absolute top-20 right-[465px] z-20 hidden 2xl:flex flex-col items-end space-y-2 pointer-events-none">
-        <GeospatialPipelineStatusPanel status={pipelineStatus} />
-        <SatelliteDataPanel />
       </div>
-
-      {/* 7. Bottom HUD: Compass, Coordinates, and Step Progression */}
-      <FooterHUD
-        currentLevel={viewLevel}
-        onSelectLevel={handleLevelSelect}
-        coordinates={{
-          latitude: telemetry.latitude,
-          longitude: telemetry.longitude,
-          altitude: telemetry.altitude
-        }}
-        heading={telemetry.heading}
-      />
-
-      {/* 8. Informational & Verification Modals */}
-      <AboutModal
-        isOpen={isAboutOpen}
-        onClose={() => {
-          setIsAboutOpen(false);
-          setActiveTab('explore');
-        }}
-      />
-
-      <HowItWorksModal
-        isOpen={isHowItWorksOpen}
-        onClose={() => {
-          setIsHowItWorksOpen(false);
-          setActiveTab('explore');
-        }}
-      />
-
-      <DataSourcesModal
-        isOpen={isDataSourcesOpen}
-        onClose={() => {
-          setIsDataSourcesOpen(false);
-          setActiveTab('explore');
-        }}
-      />
-
-      <Fullscreen3DModal
-        isOpen={isFullscreen3DOpen}
-        onClose={() => setIsFullscreen3DOpen(false)}
-        property={currentProperty}
-      />
-
-      {/* Real End-to-End YOLO + OSM + LiDAR + 3D Validation Modal */}
-      <YoloDebugValidationModal
-        isOpen={isDebugModalOpen}
-        onClose={() => setIsDebugModalOpen(false)}
-        buildings={laMetadata?.buildings || []}
-        onSelectAndFlyToBuilding={(b) => {
-          setSelectedLABuilding(b);
-          setSelectedFloor(null);
-          const val = buildingFusionService.validateBuildingAlignment(b, null);
-          setSelectedAlignment(val);
-          setTargetFlyLocation({
-            latitude: b.center.latitude,
-            longitude: b.center.longitude,
-            altitude: b.peakElevationAMSL + 90
-          });
-        }}
-        yoloStatus={yoloStatus}
-        onRunSegmentation={handleRunYoloSegmentation}
-      />
-
-      {/* Property Passport & QR Verification Modal */}
-      {passportModalData && (
-        <PropertyPassportModal
-          isOpen={!!passportModalData}
-          onClose={() => setPassportModalData(null)}
-          passport={passportModalData}
-          onExportGeoJson={() => {
-            if (selectedBuilding) {
-              const jsonStr = intelligenceService.exportGeoJson(
-                selectedBuilding,
-                passportModalData.validation,
-                passportModalData.confidence
-              );
-              const blob = new Blob([jsonStr], { type: 'application/geo+json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `Bhu3D_${selectedBuilding.id}_passport.geojson`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }
-          }}
-        />
-      )}
-      {/* 9. Dual-Viewport Synchronized Side-by-Side Verification Modal */}
-      <RealLidarSideBySideModal
-        isOpen={isSideBySideOpen}
-        onClose={() => setIsSideBySideOpen(false)}
-        metadata={realLidarMetadata}
-      />
-
-      {/* 10. LiDAR -> Mesh Quality & Validation Inspector Modal */}
-      <RealLidarMeshInspectorModal
-        isOpen={isMeshInspectorOpen}
-        onClose={() => setIsMeshInspectorOpen(false)}
-        metadata={realLidarMetadata}
-      />
-    </div>
+    </ErrorBoundary>
   );
 }
-
 export default App;
-

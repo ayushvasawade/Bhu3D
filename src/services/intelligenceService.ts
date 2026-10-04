@@ -10,10 +10,7 @@ import {
   PropertyPassportData,
   ProvenanceStatus
 } from '../types/intelligence';
-import { BuildingFootprint, Parcel } from '../types/geospatial';
-import { RealLidarBuilding } from '../types/lidar';
-import { PropertyRecord } from '../types/property';
-import { calculateDistanceMeters } from '../utils/geoUtils';
+import { LABuildingRecord } from '../types/lidar';
 
 class IntelligenceService {
   /**
@@ -142,7 +139,7 @@ class IntelligenceService {
   /**
    * Deterministic confidence score for an LABuildingRecord fused across LiDAR, OSM, and YOLO
    */
-  calculateFusedBuildingConfidence(building: RealLidarBuilding | any): ConfidenceBreakdown {
+  calculateFusedBuildingConfidence(building: LABuildingRecord | any): ConfidenceBreakdown {
     const hasYolo = !!building.yoloMaskCoordinates;
     const yoloIoU = building.yoloIoU ?? 0;
     const hasLiDAR = (building.pointCount ?? 0) > 0 || !!building.pointCloudMetrics;
@@ -379,10 +376,10 @@ class IntelligenceService {
    */
   buildEvidenceList(options: {
     isLiDAR: boolean;
-    lidarMeta?: RealLidarBuilding | null;
-    osmBuilding?: BuildingFootprint | null;
+    lidarMeta?: any;
+    osmBuilding?: any;
     sentinelScene?: any;
-    parcel?: Parcel | null;
+    parcel?: any;
   }): EvidenceItem[] {
     const evidence: EvidenceItem[] = [];
 
@@ -603,7 +600,7 @@ class IntelligenceService {
   /**
    * Generate downloadable GeoJSON with source provenance metadata
    */
-  exportGeoJson(building: BuildingFootprint, validation: ValidationSummary3D, confidence: ConfidenceBreakdown): string {
+  exportGeoJson(building: LABuildingRecord | any, validation: ValidationSummary3D, confidence: ConfidenceBreakdown): string {
     const exportObject = {
       type: 'FeatureCollection',
       name: `Bhu3D_Export_${building.id}`,
