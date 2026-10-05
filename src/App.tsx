@@ -4,21 +4,21 @@ import { LeftSidebar, LayerVisibilityState } from './components/layout/LeftSideb
 import { CesiumViewer } from './components/globe/CesiumViewer';
 import { LABuildingCard } from './components/lidar/LABuildingCard';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import {
-  LABuildingRecord,
-  LADatasetMetadata,
-  FloorInspectionOptions,
-  PointCloudRenderOptions
-} from './types/lidar';
+import { LABuildingRecord, LADatasetMetadata, FloorInspectionOptions, PointCloudRenderOptions } from './types/lidar';
 import { YoloBuildingDetection } from './types/yolo';
 import { lidarService } from './services/lidarService';
 import { yoloService } from './services/yoloSegmentationService';
 import { buildingFusionService } from './services/buildingFusionService';
+import { useRouter } from './router/useRouter';
+import { BuildingDetailsPage } from './components/building/BuildingDetailsPage';
 import * as Cesium from 'cesium';
 
 export function App() {
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Router state
+  const { route, navigateToBuilding, navigateToGlobe } = useRouter();
 
   // Metadata & Selection States
   const [laMetadata, setLaMetadata] = useState<LADatasetMetadata | null>(null);
@@ -206,6 +206,90 @@ export function App() {
     }
   };
 
+  // Resolve active building from route if in /building/:buildingId
+  const routeBuilding = React.useMemo(() => {
+    if (route.name !== 'building-details' || !laMetadata?.buildings) return null;
+    const target = route.buildingId.toLowerCase();
+    const targetDigits = target.replace(/[^0-9]/g, '');
+
+    return (
+      laMetadata.buildings.find((b) => {
+        if (b.id.toLowerCase() === target) return true;
+        if (String(b.osmWayId) === target) return true;
+        if (targetDigits && String(b.osmWayId) === targetDigits) return true;
+        if (targetDigits && b.id.replace(/[^0-9]/g, '') === targetDigits) return true;
+        return false;
+      }) || null
+    );
+  }, [route, laMetadata]);
+
+  // Synchronize routeBuilding with selectedBuilding state
+  useEffect(() => {
+    if (routeBuilding && routeBuilding.id !== selectedBuilding?.id) {
+      setSelectedBuilding(routeBuilding);
+      setCameraMode('precinct');
+    }
+  }, [routeBuilding, selectedBuilding]);
+
+  // If on /building/:buildingId, render dedicated full-page Building Details view
+  if (route.name === 'building-details') {
+    if (!laMetadata) {
+      return (
+        <div className="w-screen h-screen bg-zinc-950 flex flex-col items-center justify-center text-white font-mono space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-cyan-950 border border-cyan-700 flex items-center justify-center animate-pulse">
+            <span className="text-cyan-400 font-bold text-lg">B3D</span>
+          </div>
+          <p className="text-sm text-zinc-300">Loading Bhu3D Building Record...</p>
+          <span className="text-xs text-zinc-500">ID: {route.buildingId}</span>
+        </div>
+      );
+    }
+
+    if (routeBuilding) {
+      return (
+        <BuildingDetailsPage
+          building={routeBuilding}
+          metadata={laMetadata}
+          onBackToGlobe={() => {
+            setSelectedBuilding(routeBuilding);
+            setCameraMode('precinct');
+            navigateToGlobe();
+          }}
+          yoloDetections={yoloDetections}
+          onSelectBuilding={(bld) => {
+            setSelectedBuilding(bld);
+            navigateToBuilding(bld.osmWayId || bld.id);
+          }}
+        />
+      );
+    }
+
+    return (
+      <div className="w-screen h-screen bg-zinc-950 flex flex-col items-center justify-center text-white font-mono space-y-4 p-6">
+        <div className="max-w-md p-6 bg-zinc-900 rounded-3xl border border-zinc-800 text-center space-y-3">
+          <h3 className="text-base font-bold text-white">Building Record Not Found</h3>
+          <p className="text-xs text-zinc-400">
+            No building record matches identifier <strong className="text-cyan-400">{route.buildingId}</strong> in the USGS 3DEP South Park dataset.
+          </p>
+          <button
+            onClick={() => navigateToGlobe()}
+            className="px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-zinc-200 transition-colors"
+          >
+            ← Return to 3D Globe
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Floor selection handler with automatic floor volume layer activation
+  const handleSelectFloor = (floor: number | null) => {
+    setSelectedFloor(floor);
+    if (floor !== null && !layers.floorVolumes) {
+      setLayers((prev) => ({ ...prev, floorVolumes: true }));
+    }
+  };
+
   return (
     <ErrorBoundary>
       <div className={`relative w-screen h-screen overflow-hidden ${isDarkMode ? 'dark bg-zinc-950 text-white' : 'bg-zinc-100 text-zinc-900'}`}>
@@ -225,9 +309,13 @@ export function App() {
             selectedBuilding={selectedBuilding}
             onSelectBuilding={(bld) => {
               setSelectedBuilding(bld);
-              if (bld) setCameraMode('precinct');
+              if (bld) {
+                setCameraMode('precinct');
+                navigateToBuilding(bld.osmWayId || bld.id);
+              }
             }}
             selectedFloor={selectedFloor}
+            onSelectFloor={handleSelectFloor}
             floorInspectionOptions={floorInspectionOptions}
             layers={layers}
             pointCloudOptions={pointCloudOptions}
@@ -251,7 +339,10 @@ export function App() {
             selectedBuilding={selectedBuilding}
             onSelectBuilding={(bld) => {
               setSelectedBuilding(bld);
-              if (bld) setCameraMode('precinct');
+              if (bld) {
+                setCameraMode('precinct');
+                navigateToBuilding(bld.osmWayId || bld.id);
+              }
             }}
             onToggleDebugPanel={() => setIsDebugPanelOpen(!isDebugPanelOpen)}
             isDebugPanelOpen={isDebugPanelOpen}
@@ -292,11 +383,14 @@ export function App() {
                 }
               }}
               selectedFloor={selectedFloor}
-              onSelectFloor={setSelectedFloor}
+              onSelectFloor={handleSelectFloor}
               floorInspectionOptions={floorInspectionOptions}
               onChangeFloorInspectionOptions={(opts) =>
                 setFloorInspectionOptions((prev) => ({ ...prev, ...opts }))
               }
+              onOpenDetailsPage={(bld) => {
+                navigateToBuilding(bld.osmWayId || bld.id);
+              }}
             />
           </div>
         )}

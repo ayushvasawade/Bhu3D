@@ -29,6 +29,7 @@ interface CesiumViewerProps {
   selectedBuilding: LABuildingRecord | null;
   onSelectBuilding: (building: LABuildingRecord | null) => void;
   selectedFloor: number | null;
+  onSelectFloor?: (floor: number | null) => void;
   floorInspectionOptions: FloorInspectionOptions;
   layers: LayerVisibilityState;
   pointCloudOptions: PointCloudRenderOptions;
@@ -47,6 +48,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   selectedBuilding,
   onSelectBuilding,
   selectedFloor,
+  onSelectFloor,
   floorInspectionOptions,
   layers,
   pointCloudOptions,
@@ -239,6 +241,17 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       handler.setInputAction((click: any) => {
         const pickedObject = viewer.scene.pick(click.position);
         if (Cesium.defined(pickedObject)) {
+          // If clicked a floor slab, select that floor
+          const entId: string = pickedObject.id?.id || '';
+          if (entId.startsWith('floor-slab-')) {
+            const parts = entId.split('-');
+            const lvl = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(lvl)) {
+              onSelectFloor?.(lvl);
+              return;
+            }
+          }
+
           // If clicked the DTLA 3D survey pin, fly directly into the 3D construction!
           if (pickedObject.id?.id === 'global-survey-pin') {
             flyToPrecinct(3.2);
@@ -261,6 +274,20 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           if (pickedObject.id?.laBuildingData) {
             onSelectBuilding(pickedObject.id.laBuildingData);
             return;
+          }
+        }
+
+        // Also check drillPick for floor slabs behind meshes
+        const drillObjects = viewer.scene.drillPick(click.position);
+        for (const d of drillObjects) {
+          const dId: string = d.id?.id || '';
+          if (dId.startsWith('floor-slab-')) {
+            const parts = dId.split('-');
+            const lvl = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(lvl)) {
+              onSelectFloor?.(lvl);
+              return;
+            }
           }
         }
 
@@ -554,12 +581,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
             height: baseZ,
             extrudedHeight: ceilingZ,
             material: isTarget
-              ? Cesium.Color.fromCssColorString('#ffffff').withAlpha(0.65)
-              : Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.22),
+              ? Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.85)
+              : Cesium.Color.fromCssColorString('#f59e0b').withAlpha(selectedFloor !== null ? 0.08 : 0.22),
             outline: true,
             outlineColor: isTarget
               ? Cesium.Color.WHITE
-              : Cesium.Color.fromCssColorString('#f59e0b').withAlpha(0.85)
+              : Cesium.Color.fromCssColorString('#f59e0b').withAlpha(selectedFloor !== null ? 0.3 : 0.85)
           }
         });
         entities.push(slabEntity);

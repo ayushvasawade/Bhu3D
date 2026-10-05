@@ -15,7 +15,8 @@ import {
   Sparkles,
   Scan,
   Database,
-  Globe2
+  Globe2,
+  ExternalLink
 } from 'lucide-react';
 import { LABuildingRecord, FloorInspectionOptions } from '../../types/lidar';
 import { DataProvenanceBadge } from '../common/DataProvenanceBadge';
@@ -29,6 +30,7 @@ interface LABuildingCardProps {
   onSelectFloor?: (floor: number | null) => void;
   floorInspectionOptions?: FloorInspectionOptions;
   onChangeFloorInspectionOptions?: (opts: Partial<FloorInspectionOptions>) => void;
+  onOpenDetailsPage?: (building: LABuildingRecord) => void;
 }
 
 export const LABuildingCard: React.FC<LABuildingCardProps> = ({
@@ -44,7 +46,8 @@ export const LABuildingCard: React.FC<LABuildingCardProps> = ({
     explodeSpacingMeters: 4.0,
     floorHeightAssumption: 3.5
   },
-  onChangeFloorInspectionOptions
+  onChangeFloorInspectionOptions,
+  onOpenDetailsPage
 }) => {
   const [showAllFloors, setShowAllFloors] = useState<boolean>(false);
 
@@ -142,6 +145,23 @@ export const LABuildingCard: React.FC<LABuildingCardProps> = ({
           <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
             WGS84: {building.center.latitude.toFixed(6)}° N, {Math.abs(building.center.longitude).toFixed(6)}° W
           </p>
+
+          {/* Dedicated Full Building Record View Action */}
+          {onOpenDetailsPage && (
+            <button
+              onClick={() => onOpenDetailsPage(building)}
+              className="w-full mt-2.5 py-2 px-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-mono text-xs font-bold flex items-center justify-between transition-all shadow-md group cursor-pointer"
+              title="Open full-page building details record"
+            >
+              <span className="flex items-center gap-1.5">
+                <ExternalLink className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                <span>Open Full Building Record</span>
+              </span>
+              <span className="text-[10px] bg-black/20 text-black px-1.5 py-0.5 rounded font-bold">
+                15 Sections ↗
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Feature 3: Derived 3D Property ID / ULPIN-Compatible Identifier */}

@@ -7,13 +7,16 @@
     <title>3D Urban Property Explorer | 3D ULPIN & Vertical Property Mapping System</title>
     <meta name="description" content="3D ULPIN Generation and Vertical Property Mapping System prototype for Smart India Hackathon. Bridging Earth, buildings, and vertical cadastral ownership." />
     <style>
-      html, body, #root {
+      html, body {
         background-color: #070b13 !important;
         margin: 0;
         padding: 0;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
+        width: 100%;
+        min-height: 100%;
+      }
+      #root {
+        width: 100%;
+        min-height: 100%;
       }
     </style>
     <script>
@@ -24,8 +27,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-[#070b13] text-slate-100 overflow-hidden font-sans select-none antialiased" style="background-color: #070b13;">
-    <div id="root" class="w-screen h-screen overflow-hidden" style="background-color: #070b13;"></div>
+  <body class="bg-[#070b13] text-slate-100 font-sans select-none antialiased" style="background-color: #070b13;">
+    <div id="root" class="w-full min-h-screen" style="background-color: #070b13;"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

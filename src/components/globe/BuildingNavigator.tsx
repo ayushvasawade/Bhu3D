@@ -308,7 +308,7 @@ export const BuildingNavigator: React.FC<BuildingNavigatorProps> = ({
                         : 'bg-zinc-800 text-zinc-300 group-hover:bg-cyan-900/80 group-hover:text-cyan-300'
                     }`}
                   >
-                    <span>Fly</span>
+                    <span>Details</span>
                     <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
