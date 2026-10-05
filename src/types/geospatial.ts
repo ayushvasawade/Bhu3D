@@ -6,7 +6,7 @@ export type HeightSource =
   | 'Estimated / Demo';
 
 export interface BuildingFootprint {
-  id: string; // e.g. "BLD-PUN-00027"
+  id: string; // e.g. "BLD-LA-00027"
   name?: string;
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
   height: number;
@@ -16,11 +16,11 @@ export interface BuildingFootprint {
   confidence?: number;
   centroid: [number, number]; // [lon, lat] in WGS84
   properties?: Record<string, any>;
-  associatedPropertyId?: string; // links to demo property like "prop-pune-01"
+  associatedPropertyId?: string; // links to demo property ID
 }
 
 export interface Parcel {
-  id: string; // e.g. "PRC-PUN-0042-1A"
+  id: string; // e.g. "PRC-0042-1A"
   surveyNumber: string;
   subDivision?: string;
   geometry: GeoJSON.Polygon;

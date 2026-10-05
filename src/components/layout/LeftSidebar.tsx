@@ -470,16 +470,16 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           }`}
         >
           <div className="flex items-center gap-2">
-            <div className={`w-4 h-4 flex items-center justify-center font-bold text-[11px] ${layers.underground ? 'text-emerald-400' : 'text-zinc-600'}`}>
+            <div className={`w-4 h-4 flex items-center justify-center font-bold text-[11px] ${layers.underground ? 'text-amber-400' : 'text-zinc-600'}`}>
               ⎇
             </div>
             <div>
-              <span className="font-semibold block leading-tight">Utility Corridors</span>
-              <span className="text-[9px] text-zinc-400 font-sans">Sewer, Water, Electric, Storm</span>
+              <span className="font-semibold block leading-tight">Underground Infrastructure</span>
+              <span className="text-[9px] text-amber-400/90 font-sans">DEMO — NOT AUTHORITATIVE</span>
             </div>
           </div>
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-            layers.underground ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-zinc-900 text-zinc-600'
+            layers.underground ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-zinc-900 text-zinc-600'
           }`}>
             {layers.underground ? 'ON' : 'OFF'}
           </span>
@@ -488,10 +488,9 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         {/* Provenance & Feature Count Summary Pill */}
         <div className="p-2 rounded-xl bg-zinc-950/90 border border-zinc-800 flex items-center justify-between text-[10px] font-mono">
           <div className="flex items-center gap-1.5">
-            <span className="text-zinc-400">LA County DPW:</span>
-            <span className="text-emerald-400 font-bold">{undergroundRealCount} Real</span>
+            <span className="text-rose-400 font-bold">UNAVAILABLE</span>
             <span className="text-zinc-600">·</span>
-            <span className="text-amber-400 font-bold">{undergroundDemoCount} Demo</span>
+            <span className="text-amber-400 font-bold">{undergroundDemoCount || 4} DEMO</span>
           </div>
           <button
             onClick={onOpenUndergroundPanel}

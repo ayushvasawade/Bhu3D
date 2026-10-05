@@ -13,6 +13,7 @@ import {
   Ruler,
   CheckCircle2,
   AlertTriangle,
+  Info,
   FileText,
   ChevronDown,
   ChevronUp,
@@ -35,6 +36,8 @@ import { BuildingDetailViewer } from './BuildingDetailViewer';
 import { FootprintAnalysisCanvas } from './FootprintAnalysisCanvas';
 import { BuildingCrossSection } from './BuildingCrossSection';
 import { PropertyHierarchyTree } from './PropertyHierarchyTree';
+import { PropertyPassportView } from './PropertyPassportView';
+import { checkLidarBoundaryCoverage, generateBuildingFloors } from '../../utils/geoUtils';
 
 interface BuildingDetailsPageProps {
   building: LABuildingRecord;
@@ -73,41 +76,39 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
     return intelligenceService.calculateFusedBuildingConfidence(building);
   }, [building]);
 
-  // Derived vertical measurements
-  const floorH = floorInspectionOptions.floorHeightAssumption || 3.5;
-  const groundZ = building.localGroundAMSL;
-  const roofZ = building.mainRoofAMSL || building.peakElevationAMSL;
-  const derivedH = Math.max(2.5, roofZ - groundZ);
-  const computedCount = Math.max(1, Math.round(derivedH / floorH));
-  const perFloorH = derivedH / computedCount;
+  // LiDAR Boundary Coverage Status
+  const coverageInfo = useMemo(() => {
+    return checkLidarBoundaryCoverage(
+      building.footprintCoordinates,
+      building.lidarCoverageStatus,
+      building.coverageRatio,
+      building.lidarCoverageNote
+    );
+  }, [building]);
+  const isBoundaryClipped = coverageInfo.status === 'BOUNDARY_CLIPPED';
 
-  // Real point density (points / footprint area)
-  const pointDensity =
-    building.footprintAreaSqM > 0
-      ? (building.pointCount / building.footprintAreaSqM).toFixed(1)
-      : '0.0';
+  // Authoritative Vertical Floor Decomposition Engine
+  const floorResult = useMemo(() => {
+    return generateBuildingFloors(building, floorInspectionOptions);
+  }, [building, floorInspectionOptions]);
 
-  // Dynamic floor plates
-  const dynamicLevels = useMemo(() => {
-    return Array.from({ length: computedCount }, (_, i) => {
-      const lvl = i + 1;
-      const zMin = groundZ + i * perFloorH;
-      const zMax = lvl === computedCount ? roofZ : groundZ + (i + 1) * perFloorH;
-      return {
-        level: lvl,
-        floorName: lvl === 1 ? 'Floor 1 (Ground)' : `Floor ${lvl}`,
-        zMinAMSL: Number(zMin.toFixed(2)),
-        zMaxAMSL: Number(zMax.toFixed(2)),
-        heightMeters: Number((zMax - zMin).toFixed(2)),
-        status: 'INFERRED' as const
-      };
-    });
-  }, [computedCount, groundZ, perFloorH, roofZ]);
-
-  const displayedLevels = showAllFloors ? dynamicLevels : dynamicLevels.slice(0, 8);
+  const dynamicFloors = floorResult.floors;
+  const dynamicLevels = dynamicFloors;
+  const displayedFloors = showAllFloors ? dynamicFloors : dynamicFloors.slice(0, 8);
+  const displayedLevels = displayedFloors;
   const currentFloorNum = selectedFloor || 1;
   const selectedFloorObj =
-    dynamicLevels.find((l) => l.level === currentFloorNum) || dynamicLevels[0];
+    dynamicFloors.find((f) => f.floorNumber === currentFloorNum) || dynamicFloors[0];
+
+  const groundZ = floorResult.baseGroundAMSL;
+  const roofZ = floorResult.roofAMSL;
+  const derivedH = floorResult.lidarHeightMeters;
+  const perFloorH = floorResult.averageFloorHeight;
+
+  // Real point density (points / footprint area)
+  const pointDensity = building.footprintAreaSqM > 0
+    ? (building.pointCount / building.footprintAreaSqM).toFixed(1)
+    : '0.0';
 
   // Deterministic Bhu3D 3D Property ID
   const cleanBldId = building.id.replace(/[^a-zA-Z0-9]/g, '');
@@ -171,8 +172,16 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
           </div>
         </div>
 
-        {/* Header Badges */}
-        <div className="flex items-center gap-2 font-mono text-xs">
+        {/* Header Badges & Passport Quick Link */}
+        <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
+          <a
+            href="#central-property-passport"
+            className="px-2.5 py-1 rounded-xl bg-cyan-950/90 hover:bg-cyan-900 border border-cyan-500/80 text-cyan-300 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-950/50"
+            title="Jump to Central Property Passport"
+          >
+            <FileText className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Property Passport</span>
+          </a>
           <DataProvenanceBadge status="REAL" label="USGS LiDAR" size="sm" />
           <DataProvenanceBadge status="DERIVED" label="LOD2 Mesh" size="sm" />
           <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold text-[10px] font-mono flex items-center gap-1">
@@ -184,6 +193,17 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
 
       {/* MAIN CONTAINER */}
       <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 pt-6 space-y-6">
+        {/* CENTRAL PROPERTY RECORD: BHU3D 3D PROPERTY PASSPORT */}
+        <section id="central-property-passport" className="scroll-mt-20">
+          <PropertyPassportView
+            building={building}
+            undergroundData={undergroundData}
+            selectedFloor={currentFloorNum}
+            onSelectFloor={setSelectedFloor}
+            isCollapsible={true}
+          />
+        </section>
+
         {/* 2. OVERVIEW & 3D VIEWER GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* 3D Interactive Cesium Building Viewer (7 cols on desktop) */}
@@ -199,7 +219,7 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                   {selectedFloorObj ? selectedFloorObj.floorName : `Floor ${currentFloorNum}`}
                 </span>
                 <span className="text-[11px] text-cyan-300">
-                  ({selectedFloorObj?.zMinAMSL}m – {selectedFloorObj?.zMaxAMSL}m AMSL)
+                  ({selectedFloorObj?.baseElevation.toFixed(1)}m – {selectedFloorObj?.topElevation.toFixed(1)}m AMSL)
                 </span>
               </div>
 
@@ -212,25 +232,25 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                 >
                   ◀
                 </button>
-                {dynamicLevels.map((lvl) => {
-                  const isSelected = currentFloorNum === lvl.level;
+                {dynamicFloors.map((fl) => {
+                  const isSelected = currentFloorNum === fl.floorNumber;
                   return (
                     <button
-                      key={lvl.level}
-                      onClick={() => setSelectedFloor(lvl.level)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                      key={fl.floorNumber}
+                      onClick={() => setSelectedFloor(fl.floorNumber)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all whitespace-nowrap ${
                         isSelected
                           ? 'bg-cyan-500 text-black shadow-md scale-105'
                           : 'bg-zinc-800/80 hover:bg-zinc-750 text-zinc-300 hover:text-white border border-zinc-700/60'
                       }`}
                     >
-                      F{lvl.level}
+                      {fl.floorCode}
                     </button>
                   );
                 })}
                 <button
-                  onClick={() => setSelectedFloor(Math.min(dynamicLevels.length, currentFloorNum + 1))}
-                  disabled={currentFloorNum >= dynamicLevels.length}
+                  onClick={() => setSelectedFloor(Math.min(dynamicFloors.length, currentFloorNum + 1))}
+                  disabled={currentFloorNum >= dynamicFloors.length}
                   className="px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-xs font-bold text-white transition-colors"
                   title="Next Floor"
                 >
@@ -286,6 +306,62 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                 Ground Datum: <strong className="text-white">{groundZ.toFixed(2)}m AMSL</strong>
               </div>
             </div>
+
+            {/* Selected Floor Elevation & Strata Details Banner */}
+            <div className="p-3 rounded-2xl bg-zinc-950 border border-cyan-900/60 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold text-[11px]">
+                  {selectedFloorObj.floorCode}
+                </span>
+                <div>
+                  <span className="text-white font-bold block">{selectedFloorObj.floorName}</span>
+                  <span className="text-[10px] text-zinc-400 block font-sans">
+                    Elevation: <strong className="text-cyan-300">{selectedFloorObj.baseElevation}m – {selectedFloorObj.topElevation}m AMSL</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-[11px]">
+                <div>
+                  <span className="text-zinc-500 block text-[9px]">Height:</span>
+                  <strong className="text-white">{selectedFloorObj.height}m</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[9px]">Volume:</span>
+                  <strong className="text-amber-300">{selectedFloorObj.volume.toLocaleString()} m³</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[9px]">Confidence:</span>
+                  <strong className="text-emerald-400">{selectedFloorObj.confidence}%</strong>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[9px]">Provenance:</span>
+                  <span className="px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[9px] font-bold">
+                    {selectedFloorObj.provenance}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* STEP 6 & 7: Explicit Floor & Unit Status Notice */}
+            <div className="p-2.5 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-[10px] font-mono grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div className="p-1 rounded bg-zinc-950 border border-zinc-850">
+                <span className="text-zinc-500 block text-[8.5px]">Floor Count:</span>
+                <span className="text-amber-300 font-bold">ESTIMATED ({floorResult.floorCount} FL)</span>
+              </div>
+              <div className="p-1 rounded bg-zinc-950 border border-zinc-850">
+                <span className="text-zinc-500 block text-[8.5px]">Floor Geometry:</span>
+                <span className="text-cyan-300 font-bold">DERIVED (OSM Footprint)</span>
+              </div>
+              <div className="p-1 rounded bg-zinc-950 border border-zinc-850">
+                <span className="text-zinc-500 block text-[8.5px]">Source:</span>
+                <span className="text-emerald-400 font-bold">REAL LiDAR + OSM</span>
+              </div>
+              <div className="p-1 rounded bg-zinc-950 border border-zinc-850">
+                <span className="text-zinc-500 block text-[8.5px]">Unit Boundaries:</span>
+                <span className="text-pink-300 font-bold">DEMO / PROTOTYPE</span>
+              </div>
+            </div>
           </div>
 
           {/* 2. BUILDING OVERVIEW & CONFIDENCE CARD (5 cols on desktop) */}
@@ -339,6 +415,24 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                   <span className="text-zinc-500">Primary Sensor:</span>
                   <span className="text-emerald-400 font-bold">USGS 3DEP Airborne LiDAR</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">LiDAR Coverage:</span>
+                  <span className={`font-bold flex items-center gap-1 ${
+                    isBoundaryClipped ? 'text-amber-300' : 'text-emerald-400'
+                  }`}>
+                    {isBoundaryClipped ? (
+                      <>
+                        <AlertTriangle className="w-3 h-3 text-amber-400" />
+                        <span>⚠ Boundary Clipped ({Math.round(coverageInfo.coverageRatio * 100)}%)</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>✓ Fully Covered</span>
+                      </>
+                    )}
+                  </span>
+                </div>
               </div>
 
               {/* Multi-Source Confidence Box */}
@@ -365,38 +459,61 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
             </div>
 
             {/* 11. 3D PROPERTY ID / ULPIN CARD */}
-            <div className="p-4 rounded-3xl bg-zinc-950 border border-cyan-800/80 space-y-2 font-mono text-xs shadow-lg">
+            <div className="p-4 rounded-3xl bg-zinc-950 border border-cyan-800/80 space-y-2.5 font-mono text-xs shadow-lg">
               <div className="flex items-center justify-between pb-1 border-b border-zinc-850">
                 <span className="text-[10px] font-bold text-cyan-400 flex items-center gap-1.5 uppercase">
                   <Hash className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Bhu3D Derived 3D Property ID</span>
+                  <span>3D Property Record</span>
                 </span>
-                <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
-                  DERIVED
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-zinc-900 border border-zinc-800">
-                <span className="font-bold text-white text-xs select-all truncate">
-                  {derivedPropertyId}
-                </span>
-                <button
-                  onClick={handleCopyId}
-                  className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[10px] font-bold transition-colors shrink-0"
+                <a
+                  href="#central-property-passport"
+                  className="text-[9px] font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 hover:bg-cyan-900 transition-colors flex items-center gap-1"
                 >
-                  {copiedId ? 'COPIED' : 'COPY'}
-                </button>
+                  <FileText className="w-3 h-3" />
+                  <span>Full Passport ↑</span>
+                </a>
               </div>
 
-              <div className="grid grid-cols-2 gap-1.5 text-[9px] text-zinc-400 pt-1">
+              {/* Official ULPIN (Honest UNAVAILABLE notice) */}
+              <div className="p-2 rounded-xl bg-black border border-rose-900/60 flex items-center justify-between text-[10px]">
+                <span className="text-zinc-400">Official ULPIN:</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-rose-400 font-bold">UNAVAILABLE</span>
+                  <DataProvenanceBadge status="UNAVAILABLE" label="UNAVAILABLE" size="sm" showIcon={false} />
+                </div>
+              </div>
+
+              {/* Bhu3D 3D Property ID */}
+              <div className="p-2 rounded-xl bg-zinc-900 border border-cyan-900/60 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-zinc-400 uppercase tracking-wider">Bhu3D 3D Property ID:</span>
+                  <DataProvenanceBadge status="DERIVED" label="DERIVED" size="sm" showIcon={false} />
+                </div>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="font-bold text-white text-[11px] select-all truncate">
+                    {derivedPropertyId}
+                  </span>
+                  <button
+                    onClick={handleCopyId}
+                    className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[9px] font-bold transition-colors shrink-0 cursor-pointer"
+                  >
+                    {copiedId ? 'COPIED' : 'COPY'}
+                  </button>
+                </div>
+                <div className="text-[9.5px] font-bold text-amber-300 tracking-wide uppercase pt-0.5">
+                  Derived Bhu3D 3D Property ID — NOT Official ULPIN
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5 text-[9px] text-zinc-400 pt-0.5">
                 <div>• Building ID: <span className="text-white">{building.id}</span></div>
-                <div>• Floor ID: <span className="text-white">{floorCode}</span></div>
-                <div>• Unit ID: <span className="text-white">U01</span></div>
-                <div>• Status: <span className="text-cyan-400 font-bold">DERIVED SPATIAL</span></div>
+                <div>• Floor ID: <span className="text-white">{selectedFloorObj.floorCode}</span></div>
+                <div>• Unit ID: <span className="text-amber-400 font-bold">U01 [DEMO / PROTOTYPE]</span></div>
+                <div>• Floor Strata: <span className="text-cyan-400 font-bold">ESTIMATED ({selectedFloorObj.confidence}%)</span></div>
               </div>
 
-              <p className="text-[9px] text-zinc-500 font-sans leading-tight pt-1">
-                Deterministic spatial identifier based on precinct + building centroid + floor level + unit index. This is a Bhu3D spatial reference and NOT an official government ULPIN deed record until authoritative municipal land titles are connected.
+              <p className="text-[8.5px] text-zinc-500 font-sans leading-tight">
+                Derived Bhu3D 3D Property ID — NOT Official ULPIN. Official municipal cadastral ownership and titles are not connected.
               </p>
             </div>
           </div>
@@ -414,7 +531,7 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
             {/* Measured Height */}
             <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-1">
               <div className="flex items-center justify-between text-[9px] text-zinc-400">
@@ -480,6 +597,30 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
               </span>
               <span className="text-[9.5px] text-zinc-500 block font-sans">
                 15th pct ring buffer
+              </span>
+            </div>
+
+            {/* LiDAR Tile Coverage */}
+            <div className={`p-3 rounded-2xl border space-y-1 ${
+              isBoundaryClipped
+                ? 'bg-amber-950/30 border-amber-800/80 text-amber-200'
+                : 'bg-zinc-950 border-zinc-800 text-zinc-300'
+            }`}>
+              <div className="flex items-center justify-between text-[9px] text-zinc-400">
+                <span>LiDAR Coverage</span>
+                <span className={`font-bold px-1.5 py-0.2 rounded text-[8px] ${
+                  isBoundaryClipped
+                    ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                    : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                }`}>
+                  {isBoundaryClipped ? '⚠ CLIPPED' : '✓ COVERED'}
+                </span>
+              </div>
+              <span className={`font-bold text-base block ${isBoundaryClipped ? 'text-amber-300' : 'text-emerald-400'}`}>
+                {isBoundaryClipped ? `${Math.round(coverageInfo.coverageRatio * 100)}% Inside` : '100% Inside'}
+              </span>
+              <span className="text-[9.5px] text-zinc-500 block font-sans">
+                {isBoundaryClipped ? 'USGS tile edge truncation' : 'Fully in flight tile'}
               </span>
             </div>
           </div>
@@ -643,26 +784,26 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
           </div>
         </section>
 
-        {/* 4C. REAL UNDERGROUND INFRASTRUCTURE & UTILITY CORRIDORS */}
+        {/* 4C. UNDERGROUND INFRASTRUCTURE */}
         <section className="p-4 sm:p-5 rounded-3xl bg-zinc-950 border border-zinc-800 space-y-4 font-mono text-xs">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 border-b border-zinc-850">
             <div>
               <h3 className="text-sm font-bold text-white tracking-tight uppercase flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-400" />
-                <span>Real Underground Infrastructure & Utility Corridors</span>
+                <Layers className="w-4 h-4 text-purple-400" />
+                <span>UNDERGROUND INFRASTRUCTURE</span>
               </h3>
               <p className="text-[10px] text-zinc-400 font-sans mt-0.5">
-                Official LA County Public Works Sewer Network MapServer (EPSG:2229 State Plane) & Subsurface Utility Corridors
+                Subsurface Utility Corridors & Subterranean Prototype Visualization
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
-                LA COUNTY PUBLIC WORKS
+              <span className="text-[9px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold">
+                DEMO PROTOTYPE
               </span>
               {onExploreUnderground && (
                 <button
                   onClick={onExploreUnderground}
-                  className="px-3 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                  className="px-3 py-1 rounded-xl bg-purple-500 hover:bg-purple-400 text-black font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shadow-md"
                 >
                   <span>Explore Subterranean 3D ↓</span>
                 </button>
@@ -670,57 +811,63 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
             </div>
           </div>
 
-          {/* 4-way KPI Tiles */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* Required Honest Underground Specification (4 KPI Tiles) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
               <span className="text-[9px] text-zinc-400 uppercase font-bold block">
-                Total Corridors
+                Authoritative data for this building:
               </span>
-              <span className="font-bold text-white text-base block">
-                {undergroundData?.features.length || 0} Assets
+              <span className="font-bold text-rose-400 text-sm block">
+                UNAVAILABLE
               </span>
               <span className="text-[9px] text-zinc-500 block font-sans">
-                Query Buffer: 120m around AOI
+                No GIS asset in current AOI
               </span>
             </div>
 
             <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
-              <span className="text-[9px] text-emerald-400 uppercase font-bold block">
-                Real Features Found
+              <span className="text-[9px] text-purple-400 uppercase font-bold block">
+                Visualization:
               </span>
-              <span className="font-bold text-emerald-300 text-base block">
-                {undergroundData?.realCount || 0} REAL
+              <span className="font-bold text-purple-300 text-sm block">
+                DEMO
               </span>
               <span className="text-[9px] text-zinc-500 block font-sans">
-                Authoritative LA County REST
+                Prototype subterranean demonstration
               </span>
             </div>
 
             <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
               <span className="text-[9px] text-amber-400 uppercase font-bold block">
-                Street Right-Of-Way Demo
+                Depth:
               </span>
-              <span className="font-bold text-amber-300 text-base block">
-                {undergroundData?.demoCount || 0} DEMO
+              <span className="font-bold text-amber-300 text-sm block">
+                ESTIMATED
               </span>
               <span className="text-[9px] text-zinc-500 block font-sans">
-                Street-grid visual demonstration
+                Visual underground z-offset
               </span>
             </div>
 
             <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
-              <span className="text-[9px] text-cyan-400 uppercase font-bold block">
-                Nearest Pipe Distance
+              <span className="text-[9px] text-zinc-400 uppercase font-bold block">
+                Source:
               </span>
-              <span className="font-bold text-cyan-300 text-base block">
-                {undergroundData?.nearestFeatureDistanceMeters !== undefined
-                  ? `${undergroundData.nearestFeatureDistanceMeters.toFixed(1)} m`
-                  : '—'}
+              <span className="font-bold text-zinc-300 text-xs block truncate" title="No authoritative feature available for current AOI">
+                No authoritative feature available for current AOI
               </span>
               <span className="text-[9px] text-zinc-500 block font-sans">
-                Euclidean building clearance
+                USGS / OpenStreetMap coverage
               </span>
             </div>
+          </div>
+
+          {/* Required Explanation Alert Banner */}
+          <div className="p-3 rounded-2xl bg-amber-950/30 border border-amber-800/80 text-[10.5px] text-amber-200/90 font-sans leading-relaxed flex items-start gap-2 shadow-sm">
+            <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <p>
+              <strong>Airborne LiDAR does not detect underground infrastructure. Underground visualization is a prototype representation pending authoritative utility/GPR/BIM data.</strong>
+            </p>
           </div>
 
           {/* Deep Subsurface Breakdown & Spatial Relationship Matrix */}
@@ -736,9 +883,9 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                   <span className="text-white font-bold">{building.id}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Spatial Status:</span>
-                  <span className={undergroundData?.realCount && undergroundData.realCount > 0 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
-                    {undergroundData?.realCount && undergroundData.realCount > 0 ? "WITHIN AOI" : "OUTSIDE EXACT FOOTPRINT"}
+                  <span className="text-zinc-500">Status:</span>
+                  <span className="text-purple-300 font-bold">
+                    DEMO — NOT AUTHORITATIVE
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -749,7 +896,7 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Intersects Footprint:</span>
-                  <span className="text-zinc-400">NO (Street ROW corridor)</span>
+                  <span className="text-zinc-400">DEMO LATERAL (Simulated)</span>
                 </div>
               </div>
             </div>
@@ -762,11 +909,11 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
               <div className="space-y-1.5 text-[11px]">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Authoritative Depth:</span>
-                  <span className="text-amber-400 font-bold">UNAVAILABLE</span>
+                  <span className="text-rose-400 font-bold">UNAVAILABLE</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Visual Vertical Offset:</span>
-                  <span className="text-zinc-300 font-bold">ESTIMATED (-3.0m to -4.5m)</span>
+                  <span className="text-amber-300 font-bold">ESTIMATED (-1.1m to -3.2m)</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-500">Ground Reference Datum:</span>
@@ -781,14 +928,14 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
             {/* Subterranean Cutaway Diagram */}
             <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-850 space-y-2">
               <span className="text-[10px] uppercase font-bold text-zinc-400 block">
-                Vertical Cutaway Architecture
+                Vertical Cutaway Architecture (DEMO)
               </span>
               <div className="p-2 rounded-xl bg-black border border-zinc-800 text-[10px] font-mono leading-tight space-y-1 text-zinc-300">
                 <div className="text-cyan-400 font-bold">BUILDING   ┌───────────────┐</div>
                 <div className="text-cyan-400 font-bold">           │ {building.derivedHeightMeters}m LOD2 Solid│</div>
                 <div className="text-zinc-400">GROUND ────┴───────────────┴──── [{building.localGroundAMSL.toFixed(2)}m AMSL]</div>
-                <div className="text-emerald-400">  ↓ sub    ───────────────────── SEWER MAIN (EST. -3.0m)</div>
-                <div className="text-blue-400">  surface  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ WATER MAIN (EST. -1.8m)</div>
+                <div className="text-emerald-400">  ↓ sub    ───────────────────── SEWER MAIN [ESTIMATED]</div>
+                <div className="text-blue-400">  surface  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ WATER MAIN [ESTIMATED]</div>
               </div>
               <p className="text-[8.5px] text-zinc-500 font-sans">
                 Never present an assumed depth as authoritative. Depth provenance is strictly maintained.
@@ -811,22 +958,18 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                     <div>
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-white">{feat.type.replace('_', ' ')}</span>
-                        <span className={`text-[8.5px] px-1 rounded font-bold ${
-                          feat.provenance === 'REAL'
-                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                            : 'bg-amber-950 text-amber-300 border border-amber-800'
-                        }`}>
-                          {feat.provenance}
+                        <span className="text-[8.5px] px-1 rounded font-bold bg-purple-950 text-purple-300 border border-purple-800">
+                          DEMO — NOT AUTHORITATIVE
                         </span>
                       </div>
-                      <span className="text-[9px] text-zinc-500 block font-mono">{feat.id} · {feat.sourceAuthority}</span>
+                      <span className="text-[9px] text-zinc-500 block font-mono">{feat.id}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-cyan-400 font-bold block">
                         {feat.distanceToBuildingMeters !== undefined ? `${feat.distanceToBuildingMeters.toFixed(1)}m` : '0.0m'}
                       </span>
-                      <span className="text-[8.5px] text-zinc-500 block">
-                        {feat.depth !== undefined ? `${feat.depth}m (REAL)` : 'Depth: Est. offset'}
+                      <span className="text-[8.5px] text-amber-300 font-bold block">
+                        {feat.depth !== undefined ? `Depth: -${feat.depth}m (ESTIMATED)` : 'Depth: ESTIMATED'}
                       </span>
                     </div>
                   </div>
@@ -852,6 +995,27 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
               LOD2 ARCHITECTURAL
             </span>
           </div>
+
+          {/* Transparent Boundary-Clipped Notice */}
+          {isBoundaryClipped && (
+            <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-800/80 space-y-1.5 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-300 font-bold flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span>Alignment Status: BOUNDARY CLIPPED</span>
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold text-[10px]">
+                  TILE TRUNCATION
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-300 font-sans leading-relaxed">
+                <strong>Reason:</strong> OSM footprint extends beyond available USGS LiDAR tile (West: -118.263944°, South: 34.035205°, East: -118.257861°, North: 34.038985°). Only {Math.round(coverageInfo.coverageRatio * 100)}% of the footprint area is inside the current flight acquisition tile.
+              </p>
+              <p className="text-[10px] text-zinc-400 font-sans italic border-t border-amber-900/40 pt-1">
+                Note: Actual measured IoU and centroid distance measurements remain displayed below for complete transparency. Boundary-clipped status clarifies that geometry mismatch is due to survey coverage boundaries rather than an algorithmic reconstruction failure.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Mesh Properties */}
@@ -978,14 +1142,14 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight uppercase flex items-center gap-2">
                   <Layers className="w-4 h-4 text-amber-400" />
-                  <span>Vertical Floor Cadastre ({dynamicLevels.length} Floors)</span>
+                  <span>Vertical Floor Cadastre ({dynamicFloors.length} Floors)</span>
                 </h3>
                 <p className="text-[10px] text-zinc-400 font-sans mt-0.5">
-                  Click any floor plate to inspect and isolate in the 3D Cesium viewer
+                  Click any floor plate to inspect and isolate in the 3D Cesium viewer · Source: REAL LiDAR + OSM
                 </p>
               </div>
               <span className="text-[9px] px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">
-                INFERRED CADASTRE
+                ESTIMATED STRATA
               </span>
             </div>
 
@@ -993,24 +1157,24 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
             <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <span className="text-zinc-400 block text-[10px]">Active Floor Strata:</span>
-                <span className="text-white font-bold text-sm">{selectedFloorObj.floorName}</span>
+                <span className="text-white font-bold text-sm">{selectedFloorObj.floorName} ({selectedFloorObj.floorCode})</span>
               </div>
               <div className="text-right">
-                <span className="text-zinc-400 block text-[10px]">Elevation Range:</span>
+                <span className="text-zinc-400 block text-[10px]">Elevation Range & Volume:</span>
                 <span className="text-cyan-300 font-bold">
-                  {selectedFloorObj.zMinAMSL}m – {selectedFloorObj.zMaxAMSL}m AMSL ({selectedFloorObj.heightMeters}m)
+                  {selectedFloorObj.baseElevation}m – {selectedFloorObj.topElevation}m AMSL ({selectedFloorObj.height}m · {selectedFloorObj.volume.toLocaleString()} m³)
                 </span>
               </div>
             </div>
 
             {/* Floor Table */}
             <div className="space-y-1.5 max-h-80 overflow-y-auto custom-scrollbar pr-1">
-              {displayedLevels.map((lvl) => {
-                const isSelected = selectedFloor === lvl.level;
+              {displayedFloors.map((fl) => {
+                const isSelected = selectedFloor === fl.floorNumber;
                 return (
                   <div
-                    key={lvl.level}
-                    onClick={() => setSelectedFloor(isSelected ? null : lvl.level)}
+                    key={fl.floorNumber}
+                    onClick={() => setSelectedFloor(isSelected ? null : fl.floorNumber)}
                     className={`p-2.5 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-white text-black border-white font-bold shadow-md'
@@ -1019,36 +1183,36 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <span
-                        className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold ${
+                        className={`w-7 h-7 rounded flex items-center justify-center text-[10px] font-bold ${
                           isSelected ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-300'
                         }`}
                       >
-                        {lvl.level}
+                        {fl.floorCode}
                       </span>
                       <div>
                         <span className="block text-[11px] leading-tight font-semibold">
-                          {lvl.floorName}
+                          {fl.floorName}
                         </span>
                         <span
                           className={`text-[9px] block ${
                             isSelected ? 'text-zinc-700' : 'text-zinc-500'
                           }`}
                         >
-                          Area: {building.footprintAreaSqM.toLocaleString()} m² · Height: {lvl.heightMeters}m
+                          Vol: {fl.volume.toLocaleString()} m³ · Height: {fl.height}m · Conf: {fl.confidence}%
                         </span>
                       </div>
                     </div>
 
                     <div className="text-right">
                       <span className="block text-[10px] font-mono">
-                        {lvl.zMinAMSL}m – {lvl.zMaxAMSL}m
+                        {fl.baseElevation}m – {fl.topElevation}m
                       </span>
                       <span
                         className={`text-[8.5px] font-bold ${
                           isSelected ? 'text-zinc-800' : 'text-amber-400'
                         }`}
                       >
-                        INFERRED
+                        {fl.provenance}
                       </span>
                     </div>
                   </div>
@@ -1056,15 +1220,20 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
               })}
             </div>
 
-            {dynamicLevels.length > 8 && (
+            {dynamicFloors.length > 8 && (
               <button
                 onClick={() => setShowAllFloors(!showAllFloors)}
                 className="w-full py-2 text-center text-xs font-mono text-zinc-400 hover:text-white flex items-center justify-center gap-1.5 bg-zinc-900/80 rounded-xl border border-zinc-800"
               >
-                <span>{showAllFloors ? 'Show Fewer Floors' : `View All ${dynamicLevels.length} Floors`}</span>
+                <span>{showAllFloors ? 'Show Fewer Floors' : `View All ${dynamicFloors.length} Floors`}</span>
                 {showAllFloors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
             )}
+
+            {/* Honest Scientific Disclaimer */}
+            <p className="text-[9px] text-zinc-500 font-sans italic border-t border-zinc-850 pt-2 leading-relaxed">
+              * Notice: LiDAR sensors measure exterior surfaces (ground bare earth DEM & surface DSM). Internal floor slabs, actual apartment unit boundaries, and legal cadastral floor titles are NOT detected through exterior walls and are computationally estimated from vertical height slices.
+            </p>
           </div>
 
           {/* Vertical Property Hierarchy (5 cols) */}

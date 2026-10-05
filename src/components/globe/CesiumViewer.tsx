@@ -25,6 +25,7 @@ import { VerticalPlacementDebugPanel } from '../lidar/VerticalPlacementDebugPane
 import { LayerVisibilityState } from '../layout/LeftSidebar';
 import { YoloBuildingDetection } from '../../types/yolo';
 import { BuildingNavigator } from './BuildingNavigator';
+import { generateBuildingFloors } from '../../utils/geoUtils';
 
 interface CesiumViewerProps {
   laMetadata: LADatasetMetadata | null;
@@ -199,56 +200,6 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         }
       });
 
-      // 2. India Cadastre Demonstration Zone: Pune
-      viewer.entities.add({
-        id: 'global-hotspot-pune',
-        name: 'Pune Urban Cadastre Sandbox',
-        position: Cesium.Cartesian3.fromDegrees(73.8567, 18.5204, 500),
-        point: {
-          pixelSize: 9,
-          color: Cesium.Color.fromCssColorString('#f59e0b'),
-          outlineColor: Cesium.Color.WHITE,
-          outlineWidth: 1.5,
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(10000, 35000000)
-        },
-        label: {
-          text: '📍 Pune Cadastre Sandbox',
-          font: '11px monospace',
-          fillColor: Cesium.Color.fromCssColorString('#fcd34d'),
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 3,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          pixelOffset: new Cesium.Cartesian2(0, -14),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(100000, 25000000)
-        }
-      });
-
-      // 3. Utah State Capitol Survey Site
-      viewer.entities.add({
-        id: 'global-hotspot-utah',
-        name: 'Utah State Capitol Survey',
-        position: Cesium.Cartesian3.fromDegrees(-111.8882, 40.7774, 1377),
-        point: {
-          pixelSize: 9,
-          color: Cesium.Color.fromCssColorString('#10b981'),
-          outlineColor: Cesium.Color.WHITE,
-          outlineWidth: 1.5,
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(10000, 35000000)
-        },
-        label: {
-          text: '📍 Utah Survey Site',
-          font: '11px monospace',
-          fillColor: Cesium.Color.fromCssColorString('#6ee7b7'),
-          outlineColor: Cesium.Color.BLACK,
-          outlineWidth: 3,
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          pixelOffset: new Cesium.Cartesian2(0, -14),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(100000, 25000000)
-        }
-      });
-
       viewerRef.current = viewer;
       onViewerReady?.(viewer);
 
@@ -277,20 +228,6 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           // If clicked the DTLA 3D survey pin, fly directly into the 3D construction!
           if (pickedObject.id?.id === 'global-survey-pin') {
             flyToPrecinct(3.2);
-            return;
-          }
-          if (pickedObject.id?.id === 'global-hotspot-pune') {
-            viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(73.8567, 18.5204, 30000),
-              duration: 2.5
-            });
-            return;
-          }
-          if (pickedObject.id?.id === 'global-hotspot-utah') {
-            viewer.camera.flyTo({
-              destination: Cesium.Cartesian3.fromDegrees(-111.8882, 40.7774, 8000),
-              duration: 2.5
-            });
             return;
           }
           if (pickedObject.id?.laBuildingData) {
@@ -624,26 +561,25 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
     if (layers.floorVolumes && selectedBuilding && selectedBuilding.footprintCoordinates?.length >= 3) {
       const groundAlt = layers.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
-      const floorH = floorInspectionOptions.floorHeightAssumption || 3.5;
-      const derivedH = selectedBuilding.derivedHeightMeters;
-      const count = Math.max(1, Math.round(derivedH / floorH));
-      const perFloorH = derivedH / count;
-      const explode = floorInspectionOptions.isExplodedView ? floorInspectionOptions.explodeSpacingMeters : 0;
+      const floorResult = generateBuildingFloors(selectedBuilding, floorInspectionOptions);
+      const perFloorH = floorResult.averageFloorHeight;
+      const explode = floorInspectionOptions.isExplodedView ? (floorInspectionOptions.explodeSpacingMeters || 2.0) : 0;
 
       const flatCoords: number[] = [];
       selectedBuilding.footprintCoordinates.forEach(([lon, lat]) => flatCoords.push(lon, lat));
 
       const entities: Cesium.Entity[] = [];
 
-      for (let i = 0; i < count; i++) {
-        const lvl = i + 1;
+      for (let i = 0; i < floorResult.floors.length; i++) {
+        const floorObj = floorResult.floors[i];
+        const lvl = floorObj.floorNumber;
         const isTarget = selectedFloor === lvl;
         const baseZ = groundAlt + i * perFloorH + i * explode;
-        const ceilingZ = baseZ + perFloorH;
+        const ceilingZ = baseZ + floorObj.height;
 
         const slabEntity = viewer.entities.add({
           id: `floor-slab-${selectedBuilding.id}-${lvl}`,
-          name: `Floor ${lvl}`,
+          name: floorObj.floorName,
           polygon: {
             hierarchy: Cesium.Cartesian3.fromDegreesArray(flatCoords),
             height: baseZ,
@@ -742,11 +678,9 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         const midIdx = Math.floor(coords.length / 2);
         const [midLon, midLat] = coords[midIdx];
 
-        const labelText = `${feat.type.replace('_', ' ')} · ${feat.provenance}\nID: ${feat.id}\n${
-          feat.depth !== undefined
-            ? `Depth: ${feat.depth}m (REAL)`
-            : `Depth: UNAVAILABLE (Est. visual offset -${depthMeters.toFixed(1)}m)`
-        }\n${feat.relationship === 'INTERSECTS_BUILDING' ? '⚡ INTERSECTS BUILDING' : feat.relationship}`;
+        const labelText = `DEMO — NOT AUTHORITATIVE\n${feat.type.replace('_', ' ')} · ID: ${feat.id}\nDepth: ESTIMATED (-${depthMeters.toFixed(1)}m)\n${
+          feat.relationship === 'INTERSECTS_BUILDING' ? '⚡ DEMO INTERSECTS BUILDING' : feat.relationship
+        }`;
 
         const labelEntity = viewer.entities.add({
           id: `underground-label-${feat.id}`,
@@ -772,7 +706,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         const [lon, lat] = feat.geometry.coordinates as [number, number];
         const pointEntity = viewer.entities.add({
           id: `underground-node-${feat.id}`,
-          name: `${feat.type} [${feat.provenance}] - ${feat.id}`,
+          name: `DEMO — NOT AUTHORITATIVE: ${feat.type} - ${feat.id}`,
           position: Cesium.Cartesian3.fromDegrees(lon, lat, featureZ),
           point: {
             pixelSize: isSelected ? 16 : 10,
@@ -781,7 +715,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
             outlineWidth: 2
           },
           label: {
-            text: `${feat.type} · ${feat.provenance}\n${feat.id}`,
+            text: `DEMO — NOT AUTHORITATIVE\n${feat.type} · ${feat.id}\nDepth: ESTIMATED`,
             font: '10px monospace',
             fillColor: Cesium.Color.WHITE,
             outlineColor: Cesium.Color.BLACK,
@@ -1007,19 +941,19 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
 
       {/* Subterranean Underground HUD Banner */}
       {isUndergroundMode && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-3 px-4 py-2 bg-emerald-950/90 backdrop-blur-xl border border-emerald-600/80 rounded-2xl shadow-2xl text-xs font-mono">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-3 px-4 py-2 bg-amber-950/90 backdrop-blur-xl border border-amber-600/80 rounded-2xl shadow-2xl text-xs font-mono">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-            <span className="font-bold text-emerald-200 uppercase tracking-wider">
-              Subterranean Mode Active
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+            <span className="font-bold text-amber-200 uppercase tracking-wider">
+              Subterranean Demo Active
             </span>
           </div>
-          <span className="text-zinc-400 text-[11px] hidden sm:inline">
-            Camera below surface · Depth test off · Translucent building shell
+          <span className="text-zinc-300 text-[11px] hidden sm:inline">
+            DEMO — NOT AUTHORITATIVE · Depth: ESTIMATED · LiDAR does not detect underground
           </span>
           <button
             onClick={exitUnderground}
-            className="px-2.5 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition-all flex items-center gap-1 text-[11px] cursor-pointer"
+            className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition-all flex items-center gap-1 text-[11px] cursor-pointer"
           >
             <span>Exit Underground</span>
           </button>
@@ -1175,30 +1109,6 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                 <span>Downtown LA (Active 3D)</span>
-              </button>
-              <button
-                onClick={() => {
-                  viewerRef.current?.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(73.8567, 18.5204, 35000),
-                    duration: 2.5
-                  });
-                }}
-                className="px-2.5 py-1 rounded-xl bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition-colors flex items-center gap-1"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                <span>Pune Sandbox (India)</span>
-              </button>
-              <button
-                onClick={() => {
-                  viewerRef.current?.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(-111.8882, 40.7774, 12000),
-                    duration: 2.5
-                  });
-                }}
-                className="px-2.5 py-1 rounded-xl bg-zinc-900 text-zinc-300 border border-zinc-800 hover:bg-zinc-800 transition-colors flex items-center gap-1"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Utah Survey</span>
               </button>
             </div>
           </div>

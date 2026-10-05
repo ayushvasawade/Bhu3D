@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { LABuildingRecord } from '../../types/lidar';
 import { YoloBuildingDetection } from '../../types/yolo';
+import { checkLidarBoundaryCoverage } from '../../utils/geoUtils';
 
 interface FootprintAnalysisCanvasProps {
   building: LABuildingRecord;
@@ -76,6 +77,15 @@ export const FootprintAnalysisCanvas: React.FC<FootprintAnalysisCanvasProps> = (
   const osmArea = building.validation?.osmAreaSqM || building.footprintAreaSqM;
   const meshArea = building.validation?.meshAreaSqM || building.footprintAreaSqM;
   const areaDiff = Math.abs(osmArea - meshArea);
+
+  // LiDAR Boundary Coverage Status
+  const coverageInfo = checkLidarBoundaryCoverage(
+    building.footprintCoordinates,
+    building.lidarCoverageStatus,
+    building.coverageRatio,
+    building.lidarCoverageNote
+  );
+  const isBoundaryClipped = coverageInfo.status === 'BOUNDARY_CLIPPED';
 
   return (
     <div className="p-4 rounded-3xl bg-zinc-950 border border-zinc-800 space-y-4 font-mono text-xs">
@@ -212,16 +222,26 @@ export const FootprintAnalysisCanvas: React.FC<FootprintAnalysisCanvasProps> = (
           </div>
 
           {/* Honest Cadastral Analysis Callout */}
-          <div className="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800 text-[10px] space-y-1">
-            <span className="text-zinc-400 font-bold block">
-              Alignment Status:{' '}
-              <strong className="text-emerald-400">
-                {building.dataFusionStatus || 'ALIGNED'}
+          <div className={`p-2.5 rounded-xl border text-[10px] space-y-1 ${
+            isBoundaryClipped
+              ? 'bg-amber-950/40 border-amber-800/80'
+              : 'bg-zinc-900/80 border-zinc-800'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400 font-bold">Alignment:</span>
+              <strong className={isBoundaryClipped ? 'text-amber-300 font-mono px-1.5 py-0.2 rounded bg-amber-950 border border-amber-800' : 'text-emerald-400 font-mono'}>
+                {isBoundaryClipped ? 'BOUNDARY CLIPPED' : (building.dataFusionStatus || 'ALIGNED')}
               </strong>
-            </span>
-            <p className="text-zinc-400 font-sans leading-relaxed">
-              The 3D reconstructed mesh footprint derives directly from the authoritative OpenStreetMap vector boundary (Way #{building.osmWayId}), ensuring 100% boundary conformity with real-world road setbacks and cadastral parcels.
-            </p>
+            </div>
+            {isBoundaryClipped ? (
+              <p className="text-zinc-300 font-sans leading-relaxed">
+                <strong>Reason:</strong> OSM footprint extends beyond available USGS LiDAR tile ({Math.round(coverageInfo.coverageRatio * 100)}% inside tile). Truncation at tile edge causes apparent IoU and centroid offset, not an algorithm failure. Actual IoU and centroid distance measurements remain displayed above.
+              </p>
+            ) : (
+              <p className="text-zinc-400 font-sans leading-relaxed">
+                The 3D reconstructed mesh footprint derives directly from the authoritative OpenStreetMap vector boundary (Way #{building.osmWayId}), ensuring 100% boundary conformity with real-world road setbacks and cadastral parcels.
+              </p>
+            )}
           </div>
         </div>
       </div>

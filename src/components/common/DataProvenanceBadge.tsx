@@ -21,29 +21,29 @@ export const DataProvenanceBadge: React.FC<DataProvenanceBadgeProps> = ({
     switch (status) {
       case 'REAL':
         return {
-          bg: 'bg-white text-black border-white shadow-sm font-bold',
-          icon: <CheckCircle2 className="w-3 h-3 text-black shrink-0" />
+          bg: 'bg-emerald-950/90 text-emerald-300 border-emerald-500 font-bold shadow-sm',
+          icon: <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
         };
       case 'DERIVED':
         return {
-          bg: 'bg-zinc-800 text-zinc-100 border-zinc-600',
-          icon: <Layers className="w-3 h-3 text-zinc-300 shrink-0" />
+          bg: 'bg-cyan-950/90 text-cyan-300 border-cyan-500 font-bold shadow-sm',
+          icon: <Layers className="w-3 h-3 text-cyan-400 shrink-0" />
         };
       case 'ESTIMATED':
         return {
-          bg: 'bg-zinc-900 text-zinc-300 border-dashed border-zinc-500',
-          icon: <Calculator className="w-3 h-3 text-zinc-400 shrink-0" />
+          bg: 'bg-amber-950/90 text-amber-300 border-dashed border-amber-500 font-bold shadow-sm',
+          icon: <Calculator className="w-3 h-3 text-amber-400 shrink-0" />
         };
       case 'DEMO':
         return {
-          bg: 'bg-zinc-900 text-zinc-300 border-zinc-700',
-          icon: <FlaskConical className="w-3 h-3 text-zinc-400 shrink-0" />
+          bg: 'bg-purple-950/90 text-purple-300 border-purple-500 font-bold shadow-sm',
+          icon: <FlaskConical className="w-3 h-3 text-purple-400 shrink-0" />
         };
       case 'UNAVAILABLE':
       default:
         return {
-          bg: 'bg-black text-zinc-500 border-zinc-800',
-          icon: <MinusCircle className="w-3 h-3 text-zinc-600 shrink-0" />
+          bg: 'bg-rose-950/70 text-rose-300 border-rose-800 font-bold',
+          icon: <MinusCircle className="w-3 h-3 text-rose-400 shrink-0" />
         };
     }
   };

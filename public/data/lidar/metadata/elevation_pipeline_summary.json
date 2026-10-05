@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-05T09:55:27.147864Z",
+  "timestamp": "2026-10-05T14:32:34.172689+00:00",
   "sourceDataset": "USGS 3DEP LiDAR - Los Angeles South Park Precinct",
   "sourceFile": "f8601d6d-142b-4343-abd0-84d85e09b02b.laz",
   "provenance": "DERIVED",
@@ -51,12 +51,12 @@
     "noDataPercentage": 0.0
   },
   "buildingHeightValidation": {
-    "buildingsProcessed": 128,
-    "meanHeightDifferenceMeters": 1.02,
-    "medianHeightDifferenceMeters": 0.64,
-    "maxHeightDifferenceMeters": 7.53,
-    "pctWithinOneMeter": 70.31,
-    "pctWithinTwoMeters": 90.62
+    "buildingsProcessed": 129,
+    "meanHeightDifferenceMeters": 2.65,
+    "medianHeightDifferenceMeters": 1.21,
+    "maxHeightDifferenceMeters": 12.98,
+    "pctWithinOneMeter": 43.41,
+    "pctWithinTwoMeters": 55.81
   },
   "outputFiles": {
     "demImage": "/data/lidar/dem/dem_surface.png",

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as Cesium from 'cesium';
 import {
   RotateCcw,
@@ -14,6 +14,7 @@ import {
 import { LABuildingRecord, FloorInspectionOptions, ElevationMode } from '../../types/lidar';
 import { YoloBuildingDetection } from '../../types/yolo';
 import { lidarService } from '../../services/lidarService';
+import { generateBuildingFloors } from '../../utils/geoUtils';
 
 interface BuildingDetailViewerProps {
   building: LABuildingRecord;
@@ -70,9 +71,12 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
     onSelectFloorRef.current = onSelectFloor;
   }, [onSelectFloor]);
 
-  const floorH = floorInspectionOptions.floorHeightAssumption || 3.5;
-  const count = Math.max(1, Math.round(bldHeight / floorH));
-  const perFloorH = bldHeight / count;
+  const floorResult = useMemo(
+    () => generateBuildingFloors(building, floorInspectionOptions),
+    [building, floorInspectionOptions]
+  );
+  const count = floorResult.floorCount;
+  const perFloorH = floorResult.averageFloorHeight;
 
   // Initialize Cesium Viewer focused strictly on this building
   useEffect(() => {
@@ -389,11 +393,8 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
     floorEntitiesRef.current = [];
 
     if (layers.floors && building.footprintCoordinates?.length >= 3) {
-      const floorH = floorInspectionOptions.floorHeightAssumption || 3.5;
-      const count = Math.max(1, Math.round(bldHeight / floorH));
-      const perFloorH = bldHeight / count;
       const explode = floorInspectionOptions.isExplodedView
-        ? floorInspectionOptions.explodeSpacingMeters
+        ? (floorInspectionOptions.explodeSpacingMeters || 2.0)
         : 0;
 
       const flatCoords: number[] = [];
@@ -401,8 +402,9 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
 
       const entities: Cesium.Entity[] = [];
 
-      for (let i = 0; i < count; i++) {
-        const lvl = i + 1;
+      for (let i = 0; i < floorResult.floors.length; i++) {
+        const floorObj = floorResult.floors[i];
+        const lvl = floorObj.floorNumber;
         const isTarget = selectedFloor === lvl;
 
         // If isolate floor is active, only render target floor
@@ -411,11 +413,11 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
         }
 
         const baseZ = groundAlt + i * perFloorH + i * explode;
-        const ceilingZ = baseZ + perFloorH;
+        const ceilingZ = baseZ + floorObj.height;
 
         const slabEntity = viewer.entities.add({
           id: `building-detail-floor-${lvl}`,
-          name: `Floor ${lvl}`,
+          name: floorObj.floorName,
           polygon: {
             hierarchy: Cesium.Cartesian3.fromDegreesArray(flatCoords),
             height: baseZ,
@@ -443,7 +445,7 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
     building,
     selectedFloor,
     floorInspectionOptions,
-    bldHeight,
+    floorResult,
     isolateSelectedFloor
   ]);
 

@@ -92,7 +92,7 @@ export interface TimelineEntry {
 
 export interface PropertyPassportData {
   bhu3dReference: string;
-  officialUlpin: string; // "Not connected" if unavailable
+  officialUlpin: string; // "UNAVAILABLE"
   buildingId: string;
   buildingName: string;
   locality: string;
@@ -114,6 +114,86 @@ export interface PropertyPassportData {
   generatedTimestamp: string;
   version: string;
   verificationUrl: string;
+
+  // 1. PROPERTY IDENTITY
+  identity: {
+    osmBuildingId: number | string;
+    buildingName: string;
+    wgs84Coordinates: { latitude: number; longitude: number };
+    aoiStatus: string;
+    bhu3dPropertyId: string;
+    officialUlpin: 'UNAVAILABLE';
+    ulpinLabel: string;
+  };
+
+  // 2. GEOMETRY
+  geometry: {
+    footprintAreaSqM: number;
+    lidarHeightMeters: number;
+    demGroundAMSL: number;
+    dsmRoofAMSL: number;
+    ndsmHeightMeters: number;
+    meshStatus: string;
+  };
+
+  // 3. VERTICAL STRUCTURE
+  verticalStructure: {
+    estimatedFloorCount: number;
+    floorElevations: { baseGroundAMSL: number; roofAMSL: number };
+    averageFloorHeight: number;
+    floorProvenance: 'ESTIMATED';
+    floors: {
+      id: string;
+      floorNumber: number;
+      baseElevation: number;
+      topElevation: number;
+      height: number;
+      volume: number;
+      confidence: number;
+      provenance: 'ESTIMATED';
+      syntheticUnitId: string;
+      unitStatus: 'DEMO / PROTOTYPE';
+    }[];
+  };
+
+  // 4. UNIT INFORMATION
+  unitInformation: {
+    selectedUnitId: string;
+    unitStatus: 'DEMO / PROTOTYPE';
+    boundaryStatus: 'UNAVAILABLE';
+    disclaimer: string;
+  };
+
+  // 5. OWNERSHIP
+  ownership: {
+    owner: 'UNAVAILABLE';
+    apn: 'UNAVAILABLE';
+    title: 'UNAVAILABLE';
+    disclaimer: string;
+  };
+
+  // 6. UNDERGROUND INFRASTRUCTURE
+  underground: {
+    source: string;
+    featureCount: number;
+    realCount: number;
+    provenance: ProvenanceStatus;
+    depthAvailability: 'AVAILABLE' | 'UNAVAILABLE' | 'ESTIMATED';
+  };
+
+  // 7. VALIDATION
+  validationMetrics: {
+    footprintIoU: number;
+    centroidOffsetMeters: number;
+    heightDifferenceMeters: number;
+    geometryStatus: string;
+    lidarCoverageStatus: string;
+    coverageRatio: number;
+  };
+
+  // 8. PROVENANCE SUMMARY
+  provenanceSummary: Record<string, ProvenanceStatus>;
+
   undergroundInfrastructure?: {
     source: string;
     featuresCount: number;
@@ -123,6 +203,28 @@ export interface PropertyPassportData {
     nearestInfrastructureType?: string;
     provenance: 'REAL' | 'DERIVED' | 'ESTIMATED' | 'DEMO' | 'UNAVAILABLE';
     statusText: string;
+  };
+  verticalFloors?: {
+    totalFloors: number;
+    floorCountStatus: 'ESTIMATED';
+    floorGeometryStatus: 'DERIVED';
+    sourceAuthority: string;
+    floorHeightAverageMeters: number;
+    baseGroundAMSL: number;
+    roofAMSL: number;
+    disclaimer: string;
+    floors: {
+      id: string;
+      floorNumber: number;
+      baseElevation: number;
+      topElevation: number;
+      height: number;
+      volume: number;
+      confidence: number;
+      provenance: 'ESTIMATED';
+      syntheticUnitId: string;
+      unitStatus: 'DEMO / PROTOTYPE';
+    }[];
   };
 }
 

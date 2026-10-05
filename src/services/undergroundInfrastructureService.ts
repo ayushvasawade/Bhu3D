@@ -260,25 +260,16 @@ class UndergroundInfrastructureService {
       (f) => f.relationship === 'INTERSECTS_BUILDING' || f.relationship === 'WITHIN_AOI' || f.relationship === 'NEAR_BUILDING'
     );
 
-    const hasRealAtAoi = intersectingRealFeatures.length > 0;
-    const finalFeatures: UndergroundFeature[] = [...intersectingRealFeatures];
+    // Underground audit establishes that for the current Downtown Los Angeles South Park AOI,
+    // zero authoritative features exist on public endpoints, and depth is not authoritatively provided.
+    // Therefore, do NOT claim real infrastructure. Generate clearly-labeled DEMO features.
+    const demoFeatures = this.generateDemoInfrastructure(targetBuilding);
+    const finalFeatures: UndergroundFeature[] = demoFeatures;
 
-    // If LA County sewer API returns zero features for our exact building/AOI,
-    // do NOT fabricate real infrastructure. Generate clearly labeled demonstration features.
-    let demoCount = 0;
-    if (!hasRealAtAoi) {
-      const demoFeatures = this.generateDemoInfrastructure(targetBuilding);
-      demoCount = demoFeatures.length;
-      finalFeatures.push(...demoFeatures);
-    }
-
-    const realCount = intersectingRealFeatures.length;
-    const estimatedCount = demoCount; // Demo features use an assumed visual vertical offset
-    const unavailableCount = realFeatures.filter((f) => f.verticalAccuracy === 'UNAVAILABLE').length;
-
-    const statusText = hasRealAtAoi
-      ? `REAL LA COUNTY DATA — ${realCount} ASSETS INTERSECTING AOI`
-      : 'REAL LA COUNTY DATA — NO FEATURE FOUND AT CURRENT AOI';
+    const realCount = 0;
+    const demoCount = demoFeatures.length;
+    const estimatedCount = demoCount;
+    const unavailableCount = demoFeatures.length;
 
     let nearestFeatDist = Infinity;
     for (const f of finalFeatures) {
@@ -288,14 +279,6 @@ class UndergroundInfrastructureService {
     }
     const nearestFeatureDistanceMeters = nearestFeatDist === Infinity ? 0.0 : nearestFeatDist;
 
-    let nearestRealDist = Infinity;
-    for (const f of intersectingRealFeatures) {
-      if (f.distanceToBuildingMeters !== undefined && f.distanceToBuildingMeters < nearestRealDist) {
-        nearestRealDist = f.distanceToBuildingMeters;
-      }
-    }
-    const nearestRealDistanceMeters = nearestRealDist === Infinity ? undefined : nearestRealDist;
-
     const result: UndergroundQueryResult = {
       aoiBounds: aoi,
       buildingId: targetBuilding.id,
@@ -303,23 +286,23 @@ class UndergroundInfrastructureService {
         latitude: targetBuilding.center.latitude,
         longitude: targetBuilding.center.longitude
       },
-      sourceAuthority: 'County of Los Angeles Department of Public Works',
-      sourceService: 'Sewer Network MapServer (CSMD)',
-      sourceUrl: LA_COUNTY_SEWER_MAPSERVER,
+      sourceAuthority: 'No authoritative feature available for current AOI',
+      sourceService: 'Underground Infrastructure (Prototype Representation)',
+      sourceUrl: 'https://dpw.gis.lacounty.gov/dpw/rest/services/Sewer_Network/MapServer',
       sourceCrs: 'EPSG:2229 (California State Plane Zone 5)',
       targetCrs: 'EPSG:4326 (WGS84)',
       queryTimestamp: new Date().toISOString(),
       featuresRequested,
       featuresReturned,
-      featuresIntersectingAoi: intersectingRealFeatures.length,
+      featuresIntersectingAoi: 0,
       featuresRendered: finalFeatures.length,
-      realCount,
+      realCount: 0,
       estimatedCount,
       demoCount,
       unavailableCount,
-      hasRealFeaturesAtAoi: hasRealAtAoi,
-      statusText,
-      nearestRealDistanceMeters,
+      hasRealFeaturesAtAoi: false,
+      statusText: 'Authoritative data for this building: UNAVAILABLE',
+      nearestRealDistanceMeters: undefined,
       nearestFeatureDistanceMeters,
       features: finalFeatures
     };
@@ -358,7 +341,7 @@ class UndergroundInfrastructureService {
       {
         id: 'DEMO-SEWER-MAIN-01',
         type: 'SEWER',
-        name: 'DEMO Sanitary Gravity Main (12" VCP)',
+        name: 'DEMO — NOT AUTHORITATIVE: Sanitary Gravity Main (12" VCP)',
         geometry: {
           type: 'LineString',
           coordinates: [
@@ -369,16 +352,17 @@ class UndergroundInfrastructureService {
         depth: 3.2, // Visual underground depth in meters
         diameter: 12,
         material: 'Vitrified Clay Pipe (VCP)',
-        status: 'DEMO REFERENCE',
-        source: 'Bhu3D Subsurface Synthesizer',
-        sourceAuthority: 'Demo Synthetic Utility Reference',
+        status: 'DEMO — NOT AUTHORITATIVE',
+        source: 'No authoritative feature available for current AOI',
+        sourceAuthority: 'No authoritative feature available for current AOI',
         sourceUrl: 'https://dpw.gis.lacounty.gov/dpw/rest/services/Sewer_Network/MapServer',
         sourceCrs: 'EPSG:4326',
         targetCrs: 'EPSG:4326',
         confidence: 0.5,
         provenance: 'DEMO',
         verticalAccuracy: 'ESTIMATED',
-        verticalNote: 'Estimated depth — not provided by source (DEMO DATA - NOT AUTHORITATIVE)',
+        verticalNote:
+          'Airborne LiDAR does not detect underground infrastructure. Underground visualization is a prototype representation pending authoritative utility/GPR/BIM data.',
         relationship: 'NEAR_BUILDING',
         distanceToBuildingMeters: 9.8
       },
@@ -386,7 +370,7 @@ class UndergroundInfrastructureService {
       {
         id: 'DEMO-SEWER-LATERAL-01',
         type: 'SEWER',
-        name: 'DEMO Building Sewer Lateral (6" PVC)',
+        name: 'DEMO — NOT AUTHORITATIVE: Building Sewer Lateral (6" PVC)',
         geometry: {
           type: 'LineString',
           coordinates: [
@@ -397,16 +381,17 @@ class UndergroundInfrastructureService {
         depth: 2.4,
         diameter: 6,
         material: 'Polyvinyl Chloride (PVC)',
-        status: 'DEMO REFERENCE',
-        source: 'Bhu3D Subsurface Synthesizer',
-        sourceAuthority: 'Demo Synthetic Utility Reference',
+        status: 'DEMO — NOT AUTHORITATIVE',
+        source: 'No authoritative feature available for current AOI',
+        sourceAuthority: 'No authoritative feature available for current AOI',
         sourceUrl: 'https://dpw.gis.lacounty.gov/dpw/rest/services/Sewer_Network/MapServer',
         sourceCrs: 'EPSG:4326',
         targetCrs: 'EPSG:4326',
         confidence: 0.5,
         provenance: 'DEMO',
         verticalAccuracy: 'ESTIMATED',
-        verticalNote: 'Estimated depth — not provided by source (DEMO DATA - NOT AUTHORITATIVE)',
+        verticalNote:
+          'Airborne LiDAR does not detect underground infrastructure. Underground visualization is a prototype representation pending authoritative utility/GPR/BIM data.',
         relationship: 'INTERSECTS_BUILDING',
         distanceToBuildingMeters: 0.0
       },
@@ -414,7 +399,7 @@ class UndergroundInfrastructureService {
       {
         id: 'DEMO-WATER-MAIN-01',
         type: 'WATER',
-        name: 'DEMO Potable Water Distribution Main (8" DIP)',
+        name: 'DEMO — NOT AUTHORITATIVE: Potable Water Distribution Main (8" DIP)',
         geometry: {
           type: 'LineString',
           coordinates: [
@@ -425,16 +410,17 @@ class UndergroundInfrastructureService {
         depth: 1.6,
         diameter: 8,
         material: 'Ductile Iron Pipe (DIP)',
-        status: 'DEMO REFERENCE',
-        source: 'Bhu3D Subsurface Synthesizer',
-        sourceAuthority: 'Demo Synthetic Utility Reference',
+        status: 'DEMO — NOT AUTHORITATIVE',
+        source: 'No authoritative feature available for current AOI',
+        sourceAuthority: 'No authoritative feature available for current AOI',
         sourceUrl: 'https://geohub.lacity.org/',
         sourceCrs: 'EPSG:4326',
         targetCrs: 'EPSG:4326',
         confidence: 0.5,
         provenance: 'DEMO',
         verticalAccuracy: 'ESTIMATED',
-        verticalNote: 'Estimated depth — not provided by source (DEMO DATA - NOT AUTHORITATIVE)',
+        verticalNote:
+          'Airborne LiDAR does not detect underground infrastructure. Underground visualization is a prototype representation pending authoritative utility/GPR/BIM data.',
         relationship: 'NEAR_BUILDING',
         distanceToBuildingMeters: 11.2
       },
@@ -442,7 +428,7 @@ class UndergroundInfrastructureService {
       {
         id: 'DEMO-ELEC-BANK-01',
         type: 'ELECTRIC',
-        name: 'DEMO Underground Electrical Duct Bank (4-way PVC)',
+        name: 'DEMO — NOT AUTHORITATIVE: Underground Electrical Duct Bank (4-way PVC)',
         geometry: {
           type: 'LineString',
           coordinates: [
@@ -453,16 +439,17 @@ class UndergroundInfrastructureService {
         depth: 1.1,
         diameter: 4,
         material: 'Concrete Encased PVC',
-        status: 'DEMO REFERENCE',
-        source: 'Bhu3D Subsurface Synthesizer',
-        sourceAuthority: 'Demo Synthetic Utility Reference',
+        status: 'DEMO — NOT AUTHORITATIVE',
+        source: 'No authoritative feature available for current AOI',
+        sourceAuthority: 'No authoritative feature available for current AOI',
         sourceUrl: 'https://geohub.lacity.org/',
         sourceCrs: 'EPSG:4326',
         targetCrs: 'EPSG:4326',
         confidence: 0.5,
         provenance: 'DEMO',
         verticalAccuracy: 'ESTIMATED',
-        verticalNote: 'Estimated depth — not provided by source (DEMO DATA - NOT AUTHORITATIVE)',
+        verticalNote:
+          'Airborne LiDAR does not detect underground infrastructure. Underground visualization is a prototype representation pending authoritative utility/GPR/BIM data.',
         relationship: 'NEAR_BUILDING',
         distanceToBuildingMeters: 10.4
       }

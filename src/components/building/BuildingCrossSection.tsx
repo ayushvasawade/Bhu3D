@@ -1,5 +1,6 @@
-import React from 'react';
-import { LABuildingRecord, LABuildingLevel } from '../../types/lidar';
+import React, { useMemo } from 'react';
+import { LABuildingRecord } from '../../types/lidar';
+import { generateBuildingFloors } from '../../utils/geoUtils';
 
 interface BuildingCrossSectionProps {
   building: LABuildingRecord;
@@ -14,36 +15,18 @@ export const BuildingCrossSection: React.FC<BuildingCrossSectionProps> = ({
   onSelectFloor,
   floorHeightAssumption = 3.5
 }) => {
-  const groundZ = building.localGroundAMSL;
-  const peakZ = building.peakElevationAMSL;
-  const derivedH = building.derivedHeightMeters;
-  const count = Math.max(1, Math.round(derivedH / floorHeightAssumption));
-  const perFloorH = derivedH / count;
+  const floorResult = useMemo(() => {
+    return generateBuildingFloors(building, { floorHeightAssumption });
+  }, [building, floorHeightAssumption]);
 
-  // Build the floor levels stack (from top floor down to ground floor for natural vertical stacking)
-  const floorLevels: Array<{
-    level: number;
-    name: string;
-    zMin: number;
-    zMax: number;
-    height: number;
-  }> = [];
-
-  for (let i = 0; i < count; i++) {
-    const lvl = i + 1;
-    const zMin = groundZ + i * perFloorH;
-    const zMax = lvl === count ? peakZ : groundZ + (i + 1) * perFloorH;
-    floorLevels.push({
-      level: lvl,
-      name: lvl === 1 ? 'Floor 1 (Ground)' : `Floor ${lvl}`,
-      zMin: Number(zMin.toFixed(2)),
-      zMax: Number(zMax.toFixed(2)),
-      height: Number((zMax - zMin).toFixed(2))
-    });
-  }
+  const groundZ = floorResult.baseGroundAMSL;
+  const peakZ = floorResult.roofAMSL;
+  const count = floorResult.floorCount;
 
   // Reverse so roof is at top, ground at bottom
-  const reversedFloors = [...floorLevels].reverse();
+  const reversedFloors = useMemo(() => {
+    return [...floorResult.floors].reverse();
+  }, [floorResult.floors]);
 
   return (
     <div className="p-4 rounded-3xl bg-zinc-950 border border-zinc-800 space-y-3 font-mono text-xs">
@@ -74,11 +57,11 @@ export const BuildingCrossSection: React.FC<BuildingCrossSectionProps> = ({
       {/* Stacked Floor Cross-Section Planks */}
       <div className="space-y-1.5 pt-1">
         {reversedFloors.map((f) => {
-          const isSelected = selectedFloor === f.level;
+          const isSelected = selectedFloor === f.floorNumber;
           return (
             <div
-              key={f.level}
-              onClick={() => onSelectFloor?.(isSelected ? null : f.level)}
+              key={f.id}
+              onClick={() => onSelectFloor?.(isSelected ? null : f.floorNumber)}
               className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
                 isSelected
                   ? 'bg-white text-black border-white shadow-lg font-bold'
@@ -91,24 +74,24 @@ export const BuildingCrossSection: React.FC<BuildingCrossSectionProps> = ({
                     isSelected ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-300'
                   }`}
                 >
-                  {f.level}
+                  {f.floorCode}
                 </span>
                 <div>
                   <span className="block text-[11px] leading-tight font-semibold">
-                    {f.name}
+                    {f.floorName}
                   </span>
                   <span className={`text-[9px] block ${isSelected ? 'text-zinc-700' : 'text-zinc-500'}`}>
-                    Height: {f.height}m · Footprint: {building.footprintAreaSqM.toLocaleString()} m²
+                    Height: {f.height}m · Vol: {f.volume.toLocaleString()} m³
                   </span>
                 </div>
               </div>
 
               <div className="text-right">
                 <span className="block font-bold text-[10px]">
-                  {f.zMin}m → {f.zMax}m
+                  {f.baseElevation}m → {f.topElevation}m
                 </span>
-                <span className={`text-[9px] ${isSelected ? 'text-zinc-800' : 'text-amber-400'}`}>
-                  INFERRED
+                <span className={`text-[9px] font-bold ${isSelected ? 'text-zinc-800' : 'text-amber-400'}`}>
+                  {f.provenance}
                 </span>
               </div>
             </div>

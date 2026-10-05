@@ -38,6 +38,41 @@ export interface LABuildingLevel {
   heightMeters: number;
 }
 
+/**
+ * Authoritative 3D Floor Volume representing vertical strata
+ */
+export interface BuildingFloor {
+  id: string;
+  buildingId: string;
+  floorNumber: number;
+  floorCode: string;
+  floorName: string;
+  baseElevation: number; // Base elevation in meters AMSL
+  topElevation: number;  // Ceiling elevation in meters AMSL
+  height: number;        // Floor-to-floor height in meters
+  footprint: [number, number][]; // [lon, lat][]
+  volume: number;        // Footprint area * height in m³
+  confidence: number;    // Multi-source confidence score (0 - 100)
+  provenance: 'ESTIMATED' | 'DERIVED' | 'REAL';
+  syntheticUnitId: string; // DEMO / PROTOTYPE unit reference
+  unitStatus: 'DEMO / PROTOTYPE';
+}
+
+export interface FloorGenerationResult {
+  floors: BuildingFloor[];
+  floorCount: number;
+  floorCountStatus: 'ESTIMATED';
+  floorGeometryStatus: 'DERIVED';
+  source: 'REAL LiDAR + OSM';
+  averageFloorHeight: number;
+  baseGroundAMSL: number;
+  roofAMSL: number;
+  lidarHeightMeters: number;
+  ndsmP95Height?: number;
+  confidenceScore: number;
+  methodology: string;
+}
+
 export interface LABuildingRecord {
   id: string;
   osmWayId: number;
@@ -74,8 +109,14 @@ export interface LABuildingRecord {
   yoloConfidence?: number;
   yoloIoU?: number;
   alignmentScore?: number;
-  dataFusionStatus?: 'ALIGNED' | 'MINOR_OFFSET' | 'MISMATCH' | 'YOLO_ONLY' | 'OSM_ONLY';
+  dataFusionStatus?: 'ALIGNED' | 'MINOR_OFFSET' | 'MISMATCH' | 'YOLO_ONLY' | 'OSM_ONLY' | 'BOUNDARY_CLIPPED';
+  // LiDAR Tile Coverage Status (boundary clipping detection)
+  lidarCoverageStatus?: LidarCoverageStatus;
+  coverageRatio?: number;
+  lidarCoverageNote?: string;
 }
+
+export type LidarCoverageStatus = 'FULLY_COVERED' | 'BOUNDARY_CLIPPED' | 'OUTSIDE_LIDAR';
 
 export type ElevationMode = 'none' | 'dem' | 'dsm' | 'ndsm';
 
@@ -203,6 +244,13 @@ export interface LADatasetMetadata {
     pointsFile: string;
   };
   elevationPipeline?: ElevationPipelineMetadata;
+  lidarCoverageSummary?: {
+    boundingBox: { west: number; south: number; east: number; north: number };
+    totalBuildings: number;
+    fullyCovered: number;
+    boundaryClipped: number;
+    outsideLidar: number;
+  };
   buildings: LABuildingRecord[];
 }
 

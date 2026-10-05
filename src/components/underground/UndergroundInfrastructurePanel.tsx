@@ -115,7 +115,43 @@ export const UndergroundInfrastructurePanel: React.FC<UndergroundInfrastructureP
         </div>
       </div>
 
-      {/* 2. Explore Underground Mode Action Banner */}
+      {/* 2. Required Honest Underground Status Specification */}
+      <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-2 text-[10.5px] font-mono shadow-inner">
+        <div className="flex items-center justify-between pb-1.5 border-b border-zinc-850">
+          <span className="text-zinc-400">Authoritative data for this building:</span>
+          <span className="text-rose-400 font-bold px-1.5 py-0.5 rounded bg-rose-950/80 border border-rose-800 text-[9.5px]">
+            UNAVAILABLE
+          </span>
+        </div>
+        <div className="flex items-center justify-between pb-1.5 border-b border-zinc-850">
+          <span className="text-zinc-400">Visualization:</span>
+          <span className="text-purple-300 font-bold px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-800 text-[9.5px]">
+            DEMO
+          </span>
+        </div>
+        <div className="flex items-center justify-between pb-1.5 border-b border-zinc-850">
+          <span className="text-zinc-400">Depth:</span>
+          <span className="text-amber-300 font-bold px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-800 text-[9.5px]">
+            ESTIMATED
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-zinc-400">Source:</span>
+          <span className="text-zinc-300 font-semibold text-[9.5px] text-right truncate max-w-[180px]">
+            No authoritative feature available for current AOI
+          </span>
+        </div>
+      </div>
+
+      {/* 2B. Required Explanation Alert Banner */}
+      <div className="p-2.5 rounded-2xl bg-amber-950/30 border border-amber-800/70 text-[10px] text-amber-200/90 font-sans leading-relaxed flex items-start gap-2 shadow-sm">
+        <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <p>
+          Airborne LiDAR does not detect underground infrastructure. Underground visualization is a prototype representation pending authoritative utility/GPR/BIM data.
+        </p>
+      </div>
+
+      {/* 3. Explore Underground Mode Action Banner */}
       <div className="p-2.5 rounded-2xl bg-zinc-900/90 border border-cyan-800/80 space-y-2">
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-zinc-300 font-bold flex items-center gap-1.5">
@@ -137,7 +173,7 @@ export const UndergroundInfrastructurePanel: React.FC<UndergroundInfrastructureP
           {isUndergroundMode ? (
             <button
               onClick={onExitUnderground}
-              className="flex-1 py-1.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-center border border-zinc-700 transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-1.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-center border border-zinc-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Minimize2 className="w-3.5 h-3.5 text-zinc-400" />
               <span>Exit Underground</span>
@@ -145,67 +181,12 @@ export const UndergroundInfrastructurePanel: React.FC<UndergroundInfrastructureP
           ) : (
             <button
               onClick={onExploreUnderground}
-              className="flex-1 py-1.5 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-center shadow-lg transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 py-1.5 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-center shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Maximize2 className="w-3.5 h-3.5" />
               <span>Explore Underground</span>
             </button>
           )}
-        </div>
-      </div>
-
-      {/* 3. Official Source & Summary Stats Card */}
-      <div className="p-2.5 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-2">
-        <div className="flex items-center justify-between text-[10px]">
-          <span className="text-zinc-400 font-bold uppercase">Data Source:</span>
-          <a
-            href={queryResult.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-sans text-[10px]"
-          >
-            <span>LA County Public Works</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-
-        {/* Status Callout */}
-        <div
-          className={`p-2 rounded-xl border text-[10px] leading-tight ${
-            queryResult.hasRealFeaturesAtAoi
-              ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300'
-              : 'bg-zinc-900 border-zinc-800 text-zinc-300'
-          }`}
-        >
-          <div className="font-bold flex items-center gap-1 mb-0.5">
-            <Info className="w-3 h-3 text-cyan-400 shrink-0" />
-            <span>{queryResult.statusText}</span>
-          </div>
-          {!queryResult.hasRealFeaturesAtAoi && (
-            <p className="text-[9px] text-zinc-500 font-sans mt-0.5">
-              LA County CSMD covers unincorporated areas; DTLA incorporates under City of LA Sanitation. Demonstration utility lines rendered with explicit DEMO tags.
-            </p>
-          )}
-        </div>
-
-        {/* Feature Provenance Counters Grid */}
-        <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
-          <div className="p-1.5 rounded-xl bg-zinc-900 border border-zinc-850">
-            <span className="text-[8px] text-zinc-500 block uppercase">Total</span>
-            <span className="font-bold text-white text-xs">{queryResult.featuresRendered}</span>
-          </div>
-          <div className="p-1.5 rounded-xl bg-zinc-900 border border-zinc-850">
-            <span className="text-[8px] text-emerald-400 block uppercase">REAL</span>
-            <span className="font-bold text-emerald-400 text-xs">{queryResult.realCount}</span>
-          </div>
-          <div className="p-1.5 rounded-xl bg-zinc-900 border border-zinc-850">
-            <span className="text-[8px] text-amber-400 block uppercase">ESTIMATED</span>
-            <span className="font-bold text-amber-400 text-xs">{queryResult.estimatedCount}</span>
-          </div>
-          <div className="p-1.5 rounded-xl bg-zinc-900 border border-zinc-850">
-            <span className="text-[8px] text-pink-400 block uppercase">DEMO</span>
-            <span className="font-bold text-pink-400 text-xs">{queryResult.demoCount}</span>
-          </div>
         </div>
       </div>
 
@@ -231,25 +212,23 @@ export const UndergroundInfrastructurePanel: React.FC<UndergroundInfrastructureP
         <div className="p-2.5 rounded-2xl bg-zinc-950 border border-cyan-900/60 space-y-2">
           <div className="flex items-center justify-between pb-1 border-b border-zinc-850">
             <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
-              BUILDING ↔ UNDERGROUND
+              BUILDING ↔ INFRASTRUCTURE
             </span>
-            <span className={`text-[8.5px] px-1.5 py-0.5 rounded font-bold border ${getRelationshipBadge(activeFeature.relationship)}`}>
-              {activeFeature.relationship.replace(/_/g, ' ')}
+            <span className="text-[8px] px-2 py-0.5 rounded font-bold bg-purple-950 text-purple-300 border border-purple-800">
+              DEMO — NOT AUTHORITATIVE
             </span>
           </div>
 
           <div className="space-y-1 text-[10.5px]">
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500">Building:</span>
+              <span className="text-zinc-500">Selected Building:</span>
               <span className="text-white font-bold truncate max-w-[170px]" title={selectedBuilding.name}>
                 {selectedBuilding.name} ({selectedBuilding.id})
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-zinc-500">Infrastructure:</span>
-              <span className="text-white font-bold truncate max-w-[170px]" title={activeFeature.id}>
-                {activeFeature.name || activeFeature.id}
-              </span>
+              <span className="text-zinc-500">Feature Status:</span>
+              <span className="text-purple-300 font-bold">DEMO — NOT AUTHORITATIVE</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-zinc-500">Distance:</span>
@@ -261,23 +240,28 @@ export const UndergroundInfrastructurePanel: React.FC<UndergroundInfrastructureP
             </div>
             <div className="flex items-center justify-between">
               <span className="text-zinc-500">Subsurface Depth:</span>
-              <span className={activeFeature.depth ? 'text-amber-300 font-bold' : 'text-zinc-400'}>
+              <span className="text-amber-300 font-bold">
                 {activeFeature.depth ? `-${activeFeature.depth}m (ESTIMATED)` : 'UNAVAILABLE'}
               </span>
             </div>
           </div>
 
           <p className="text-[8.5px] text-zinc-500 font-sans leading-tight pt-1 border-t border-zinc-850 italic">
-            Do not claim the sewer belongs to the property. Utilities within public rights-of-way represent municipal service connections.
+            Airborne LiDAR does not detect underground infrastructure. Underground visualization is a prototype representation pending authoritative utility/GPR/BIM data.
           </p>
         </div>
       )}
 
       {/* 6. Visual Underground Cutaway Diagram */}
       <div className="p-2.5 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-1.5 font-mono text-[9.5px]">
-        <span className="text-[10px] text-zinc-400 uppercase font-bold block">
-          Subterranean Stratum Diagram
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-zinc-400 uppercase font-bold block">
+            Subterranean Diagram
+          </span>
+          <span className="text-[8px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold">
+            DEMO PROTOTYPE
+          </span>
+        </div>
         <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] leading-relaxed">
           <div className="text-cyan-300 font-bold">
             BUILDING  ┌─────────────────────┐
@@ -286,21 +270,21 @@ export const UndergroundInfrastructurePanel: React.FC<UndergroundInfrastructureP
             GROUND ───┴─────────────────────┴─── (0.0m Ground Surface)
           </div>
           <div className="text-amber-400">
-            ↓ -1.5m ─── POTABLE WATER MAIN (8" DIP)
+            ↓ -1.5m ─── POTABLE WATER MAIN [ESTIMATED]
           </div>
           <div className="text-emerald-400">
-            ↓ -3.2m ─── SANITARY SEWER GRAVITY MAIN (12" VCP)
+            ↓ -3.2m ─── SANITARY SEWER MAIN [ESTIMATED]
           </div>
         </div>
-        <p className="text-[8.5px] text-zinc-500 font-sans leading-tight">
-          Visual vertical offset only. Not physical engineering survey depth unless authoritatively specified.
+        <p className="text-[8px] text-zinc-500 font-sans leading-tight">
+          Visual depth is ESTIMATED. No authoritative 3D underground utility data is available for this building.
         </p>
       </div>
 
       {/* 7. Detailed Feature List */}
       <div className="space-y-1.5">
         <span className="text-[10px] font-bold text-zinc-400 uppercase block px-1">
-          Infrastructure Elements ({filteredFeatures.length})
+          Demo Elements ({filteredFeatures.length})
         </span>
 
         {filteredFeatures.map((f) => {
@@ -320,28 +304,20 @@ export const UndergroundInfrastructurePanel: React.FC<UndergroundInfrastructureP
                   <span className={`text-[8.5px] px-1.5 py-0.2 rounded font-bold border ${getTypeColor(f.type)}`}>
                     {f.type}
                   </span>
-                  <span className="text-white font-bold text-[11px] truncate max-w-[150px]">
+                  <span className="text-white font-bold text-[10.5px] truncate max-w-[130px]">
                     {f.id}
                   </span>
                 </div>
-                <span
-                  className={`text-[8px] px-1.5 py-0.2 rounded font-bold ${
-                    f.provenance === 'REAL'
-                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                      : f.provenance === 'DEMO'
-                      ? 'bg-pink-950 text-pink-300 border border-pink-800'
-                      : 'bg-amber-950 text-amber-300 border border-amber-800'
-                  }`}
-                >
-                  {f.provenance}
+                <span className="text-[8px] px-1.5 py-0.2 rounded font-bold bg-purple-950 text-purple-300 border border-purple-800">
+                  DEMO — NOT AUTHORITATIVE
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-1 text-[9px] text-zinc-400">
-                <div>Material: <span className="text-zinc-200">{f.material || 'Standard'}</span></div>
-                <div>Diameter: <span className="text-zinc-200">{f.diameter ? `${f.diameter}"` : 'N/A'}</span></div>
+                <div>Type: <span className="text-zinc-200">{f.type}</span></div>
+                <div>Status: <span className="text-purple-300 font-bold">DEMO</span></div>
                 <div>Distance: <span className="text-cyan-300">{f.distanceToBuildingMeters !== undefined ? `${f.distanceToBuildingMeters}m` : 'Adjacent'}</span></div>
-                <div>Depth: <span className={f.depth ? 'text-amber-300' : 'text-zinc-500'}>{f.depth ? `-${f.depth}m` : 'UNAVAILABLE'}</span></div>
+                <div>Depth: <span className="text-amber-300 font-bold">{f.depth ? `-${f.depth}m (ESTIMATED)` : 'ESTIMATED'}</span></div>
               </div>
             </div>
           );
