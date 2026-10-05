@@ -23,12 +23,13 @@ export class YoloSegmentationService {
   private isModelLoading = false;
   private modelLoaded = false;
   private config: YoloServiceConfig = {
-    modelPath: '/models/yolov8n-seg.onnx',
+    modelPath: '/models/building-segmentation.onnx',
     confidenceThreshold: 0.35,
     nmsThreshold: 0.45,
     inputSize: [640, 640],
     matchIoUThreshold: 0.25,
-    maxCentroidDistanceMeters: 35.0
+    maxCentroidDistanceMeters: 35.0,
+    buildingClassId: 0
   };
 
   private statusListener: ((status: YoloProcessingStatus) => void) | null = null;
@@ -71,7 +72,7 @@ export class YoloSegmentationService {
 
     const path = modelPath || this.config.modelPath;
     this.isModelLoading = true;
-    this.updateStatus('LOADING_MODEL', 0.1, `Initializing YOLOv8-seg model from ${path}...`);
+    this.updateStatus('LOADING_MODEL', 0.1, `Initializing model from ${path}...`);
 
     try {
       // Configure ONNX runtime web for browser WASM execution
@@ -86,20 +87,20 @@ export class YoloSegmentationService {
 
       this.modelLoaded = true;
       this.isModelLoading = false;
-      this.updateStatus('IDLE', 1.0, 'YOLOv8-seg model loaded successfully');
+      this.updateStatus('IDLE', 1.0, 'Building segmentation model loaded successfully');
       return true;
     } catch (err: any) {
       this.isModelLoading = false;
       this.modelLoaded = false;
       this.session = null;
       console.warn(
-        `[YOLO] ONNX model could not be loaded from ${path} (${err.message}). High-resolution CV segmentation fallback will be active.`,
-        err
+        `[YOLO] Dedicated building segmentation model not available at ${path} (${err.message}). ` +
+        'Fake fallback is disabled: reporting YOLO Building Segmentation Unavailable.'
       );
       this.updateStatus(
         'IDLE',
         1.0,
-        'YOLO ONNX model not found locally; Computer Vision Segmentation Engine active'
+        'YOLO Building Segmentation Unavailable'
       );
       return false;
     }
@@ -151,13 +152,19 @@ export class YoloSegmentationService {
       console.log(`[YOLO] Executing REAL ONNX Runtime Web inference: model=${this.config.modelPath}`);
       detections = await this.runOnnxInference(sourceCanvas, extent);
     } else {
-      console.warn(`[YOLO] ONNX model could not be loaded; using CV fallback.`);
-      detections = this.runVisionFallback(sourceCanvas, extent);
+      console.warn(`[YOLO] No building segmentation model loaded. Fake detections are disabled.`);
+      this.updateStatus(
+        'IDLE',
+        1.0,
+        'YOLO Building Segmentation Unavailable',
+        { detectionCount: 0, matchedCount: 0 }
+      );
+      return [];
     }
 
     const elapsed = Math.round(performance.now() - startTime);
     console.log(
-      `[YOLO] Inference complete: ${detections.length} masks extracted in ${elapsed}ms (Real ONNX: ${!!this.session})`
+      `[YOLO] Inference complete: ${detections.length} masks extracted in ${elapsed}ms`
     );
     this.updateStatus(
       'COMPLETE',
@@ -244,12 +251,31 @@ export class YoloSegmentationService {
 
     const detections: YoloBuildingDetection[] = [];
     const [inputW, inputH] = this.config.inputSize;
+    const numClasses = numChannels - 4 - 32;
+
+    // Check if the loaded model is a standard COCO model (80 classes, class 0 = person)
+    // COCO does NOT contain a building class. Do NOT fabricate detections!
+    if (numClasses === 80) {
+      console.warn(
+        '[YOLO] COCO model detected: COCO dataset does not contain a building class (Class 0 is Person). ' +
+        'YOLO Building Segmentation requires a dedicated building segmentation model at /models/building-segmentation.onnx. ' +
+        'Synthetic/fake detections are strictly disabled.'
+      );
+      this.updateStatus(
+        'IDLE',
+        1.0,
+        'YOLO Building Segmentation Unavailable (COCO model lacks building class)',
+        { detectionCount: 0, matchedCount: 0 }
+      );
+      return [];
+    }
+
+    const targetBuildingClass = this.config.buildingClassId ?? 0;
 
     // Filter candidate proposals
     for (let p = 0; p < numProposals; p++) {
       let maxConf = 0;
       let bestClass = 0;
-      const numClasses = numChannels - 4 - 32;
 
       for (let c = 0; c < numClasses; c++) {
         const score = data0[(4 + c) * numProposals + p];
@@ -260,6 +286,8 @@ export class YoloSegmentationService {
       }
 
       if (maxConf < this.config.confidenceThreshold) continue;
+      // Strictly filter for the dedicated building class from a trained building model
+      if (bestClass !== targetBuildingClass) continue;
 
       const cx = data0[0 * numProposals + p];
       const cy = data0[1 * numProposals + p];
@@ -331,7 +359,7 @@ export class YoloSegmentationService {
       detections.push({
         detectionId: `YOLO-DET-${detections.length + 1}`,
         classId: bestClass,
-        classLabel: bestClass === 0 ? 'building' : `class_${bestClass}`,
+        classLabel: 'building',
         confidence: Math.round(maxConf * 100) / 100,
         bboxNormalized: [cx / inputW, cy / inputH, w / inputW, h / inputH],
         bboxPixels: [xMin, yMin, xMax, yMax],
@@ -367,100 +395,6 @@ export class YoloSegmentationService {
 
     sorted.push([sorted[0][0], sorted[0][1]]);
     return sorted;
-  }
-
-  /**
-   * High-resolution Computer Vision Segmentation Fallback Engine
-   * Detects building footprints directly from canvas imagery using edge, contrast,
-   * and morphological region extraction when pre-trained weights are initializing or offline.
-   */
-  private runVisionFallback(
-    sourceCanvas: HTMLCanvasElement,
-    extent: [number, number, number, number]
-  ): YoloBuildingDetection[] {
-    this.updateStatus('INFERENCING', 0.4, 'Analyzing aerial contrast, edges & morphological building footprints...');
-
-    const width = sourceCanvas.width;
-    const height = sourceCanvas.height;
-    const ctx = sourceCanvas.getContext('2d');
-    if (!ctx) return [];
-
-    const detections: YoloBuildingDetection[] = [];
-
-    // Analyze image in grid patches to extract rooftop shapes
-    const patchCols = 8;
-    const patchRows = 8;
-    const patchW = width / patchCols;
-    const patchH = height / patchRows;
-
-    let idCounter = 1;
-
-    for (let r = 0; r < patchRows; r++) {
-      for (let c = 0; c < patchCols; c++) {
-        const px = c * patchW + patchW * 0.15;
-        const py = r * patchH + patchH * 0.15;
-        const pw = patchW * 0.7;
-        const ph = patchH * 0.7;
-
-        // Sample pixel contrast inside patch to determine if structural building rooftop exists
-        const sampleX = Math.floor(px + pw / 2);
-        const sampleY = Math.floor(py + ph / 2);
-        if (sampleX >= width || sampleY >= height) continue;
-
-        try {
-          const pixel = ctx.getImageData(sampleX, sampleY, 1, 1).data;
-          const brightness = (pixel[0] + pixel[1] + pixel[2]) / 3;
-          // Buildings have distinct roof reflectance vs dark asphalt / foliage
-          const isStructure = brightness > 50 && brightness < 220;
-
-          if (isStructure) {
-            // Generate segmented polygon boundary (quadrilateral with subtle edge jitter)
-            const marginX = pw * 0.05;
-            const marginY = ph * 0.05;
-            const maskPixels: [number, number][] = [
-              [px + marginX, py + marginY],
-              [px + pw - marginX, py + marginY],
-              [px + pw - marginX, py + ph - marginY],
-              [px + marginX, py + ph - marginY],
-              [px + marginX, py + marginY]
-            ];
-
-            const maskGeo = maskPixels.map(([ptX, ptY]) =>
-              this.pixelToGeo(ptX, ptY, width, height, extent)
-            );
-            const centroidGeo = this.calculateCentroid(maskGeo);
-            const areaSqM = this.calculateGeodesicArea(maskGeo);
-
-            const confidence = Math.min(0.96, Math.max(0.65, 0.75 + (brightness % 20) / 100));
-
-            detections.push({
-              detectionId: `YOLO-DET-${idCounter++}`,
-              classId: 0,
-              classLabel: 'building',
-              confidence: Math.round(confidence * 100) / 100,
-              bboxNormalized: [
-                (px + pw / 2) / width,
-                (py + ph / 2) / height,
-                pw / width,
-                ph / height
-              ],
-              bboxPixels: [px, py, px + pw, py + ph],
-              maskPixelCoords: maskPixels,
-              maskGeoCoords: maskGeo,
-              maskAreaPixels: Math.round(pw * ph),
-              maskAreaSqM: Math.round(areaSqM * 10) / 10,
-              centroidGeo,
-              imageTileExtent: extent,
-              imageSize: [width, height]
-            });
-          }
-        } catch {
-          // ignore off-canvas bounds
-        }
-      }
-    }
-
-    return detections;
   }
 
   /**

@@ -57,12 +57,96 @@ export interface LABuildingRecord {
   levels: LABuildingLevel[];
   footprintCoordinates: [number, number][];
 
+  // True LiDAR-Driven 3D Fidelity Metrics & Morphology
+  architecture?: BuildingArchitecture;
+  fidelity3D?: LidarMesh3DFidelity;
+  heightErrorMap25D?: HeightErrorMap25D;
+  topology?: BuildingTopology;
+
+  // Real geometric validation metrics
+  validation?: LABuildingValidation;
+
   // YOLO segmentation & fusion properties (actual runtime inference results only)
   yoloMaskCoordinates?: [number, number][];
   yoloConfidence?: number;
   yoloIoU?: number;
   alignmentScore?: number;
   dataFusionStatus?: 'ALIGNED' | 'MINOR_OFFSET' | 'MISMATCH' | 'YOLO_ONLY' | 'OSM_ONLY';
+}
+
+export interface LidarMesh3DFidelity {
+  meanDistanceMeters: number;
+  medianDistanceMeters: number;
+  rmseMeters: number;
+  p90DistanceMeters: number;
+  p95DistanceMeters: number;
+  maxDistanceMeters: number;
+  pctWithin025m: number;
+  pctWithin050m: number;
+  pctWithin100m: number;
+  pctWithin200m: number;
+  totalValidLidarPoints: number;
+}
+
+export interface HeightErrorMap25D {
+  meanDeltaZMeters: number;
+  rmseDeltaZMeters: number;
+  p95AbsDeltaZMeters: number;
+  pctFaithfulGreen: number;
+  pctModerateYellow: number;
+  pctLargeRed: number;
+  totalGridCells: number;
+}
+
+export interface DetectedRoofPlane {
+  planeIndex: number;
+  elevationAMSL: number;
+  heightAboveGroundMeters: number;
+  areaSqM: number;
+  pointCount: number;
+  tiltDegrees: number;
+  normal: [number, number, number];
+  residualRMSE: number;
+  isSloped: boolean;
+}
+
+export interface BuildingArchitecture {
+  classification: 'COMPLEX_SLOPED_FACETS' | 'MULTI_TIER_STEPPED_DECKS' | 'MONOLITHIC_PLANAR_DECK';
+  detectedPlaneCount: number;
+  planes: DetectedRoofPlane[];
+}
+
+export interface BuildingTopology {
+  isWatertight: boolean;
+  meshVertices: number;
+  meshFaces: number;
+  volumeCubicMeters?: number | null;
+}
+
+export interface LABuildingTierInfo {
+  tierName: string;
+  elevationAMSL: number;
+  heightAboveGroundMeters: number;
+  areaSqM: number;
+  pointCount: number;
+  residualRMSE: number;
+}
+
+export interface LABuildingValidation {
+  osmAreaSqM: number;
+  meshAreaSqM: number;
+  osmMeshIoU: number;
+  centroidOffsetMeters: number;
+  lidarMeasuredHeightMeters: number;
+  meshHeightMeters: number;
+  heightErrorMeters: number;
+  lidarRoofPoints: number;
+  lidarPointsUsed: number;
+  roofElevationRMSE: number;
+  roofClassification: 'FLAT_MONOLITHIC' | 'FLAT_STEPPED_TIERS' | 'SLOPED_RANSAC';
+  isWatertight: boolean;
+  tierCount: number;
+  tiers: LABuildingTierInfo[];
 }
 
 export interface LADatasetMetadata {

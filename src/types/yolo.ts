@@ -246,4 +246,7 @@ export interface YoloServiceConfig {
 
   /** Maximum centroid distance in meters for matching */
   maxCentroidDistanceMeters: number;
+
+  /** Target class ID for building segmentation in trained model (defaults to 0 for custom building models) */
+  buildingClassId?: number;
 }
