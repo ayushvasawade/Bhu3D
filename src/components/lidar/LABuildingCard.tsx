@@ -32,6 +32,8 @@ interface LABuildingCardProps {
   floorInspectionOptions?: FloorInspectionOptions;
   onChangeFloorInspectionOptions?: (opts: Partial<FloorInspectionOptions>) => void;
   onOpenDetailsPage?: (building: LABuildingRecord) => void;
+  undergroundData?: import('../../types/underground').UndergroundQueryResult | null;
+  onExploreUnderground?: () => void;
 }
 
 export const LABuildingCard: React.FC<LABuildingCardProps> = ({
@@ -48,7 +50,9 @@ export const LABuildingCard: React.FC<LABuildingCardProps> = ({
     floorHeightAssumption: 3.5
   },
   onChangeFloorInspectionOptions,
-  onOpenDetailsPage
+  onOpenDetailsPage,
+  undergroundData = null,
+  onExploreUnderground
 }) => {
   const [showAllFloors, setShowAllFloors] = useState<boolean>(false);
 
@@ -661,6 +665,52 @@ export const LABuildingCard: React.FC<LABuildingCardProps> = ({
             </p>
           </div>
         )}
+
+        {/* Underground Infrastructure Preview */}
+        <div className="p-2.5 rounded-2xl bg-zinc-950 border border-emerald-900/60 space-y-2 text-xs font-mono">
+          <div className="flex items-center justify-between pb-1 border-b border-zinc-850">
+            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Underground Utilities</span>
+            </span>
+            <span className="text-[8.5px] px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-bold">
+              LA COUNTY DPW
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+            <div className="p-1.5 rounded-xl bg-zinc-900/80 border border-zinc-800">
+              <span className="text-zinc-500 block text-[9px]">Features:</span>
+              <span className="text-white font-bold">
+                {undergroundData?.features.length || 0} ({undergroundData?.realCount || 0} Real)
+              </span>
+            </div>
+            <div className="p-1.5 rounded-xl bg-zinc-900/80 border border-zinc-800">
+              <span className="text-zinc-500 block text-[9px]">Nearest Main:</span>
+              <span className="text-cyan-400 font-bold">
+                {undergroundData?.nearestFeatureDistanceMeters !== undefined
+                  ? `${undergroundData.nearestFeatureDistanceMeters.toFixed(1)}m`
+                  : 'Searching...'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-[9px] pt-0.5">
+            <span className="text-zinc-400 truncate max-w-[190px]">
+              {undergroundData?.realCount && undergroundData.realCount > 0
+                ? 'Real Sewer Main Intersects AOI'
+                : 'REAL: None in AOI (Demo shown)'}
+            </span>
+            {onExploreUnderground && (
+              <button
+                onClick={onExploreUnderground}
+                className="text-emerald-400 hover:text-emerald-300 underline font-bold cursor-pointer"
+              >
+                Explore 3D ↓
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Data Architecture Transparency Box */}
         <div className="p-2 rounded-xl bg-zinc-950 border border-zinc-850 text-[9px] text-zinc-500 space-y-0.5 font-mono">

@@ -19,6 +19,7 @@ import {
   PointCloudRenderOptions,
   ElevationMode
 } from '../../types/lidar';
+import { UndergroundFeature, UndergroundQueryResult } from '../../types/underground';
 import { lidarService } from '../../services/lidarService';
 import { VerticalPlacementDebugPanel } from '../lidar/VerticalPlacementDebugPanel';
 import { LayerVisibilityState } from '../layout/LeftSidebar';
@@ -34,6 +35,11 @@ interface CesiumViewerProps {
   floorInspectionOptions: FloorInspectionOptions;
   layers: LayerVisibilityState;
   elevationMode?: ElevationMode;
+  isUndergroundMode?: boolean;
+  onToggleUndergroundMode?: (enabled: boolean) => void;
+  undergroundData?: UndergroundQueryResult | null;
+  selectedUndergroundFeature?: UndergroundFeature | null;
+  onSelectUndergroundFeature?: (feature: UndergroundFeature | null) => void;
   pointCloudOptions: PointCloudRenderOptions;
   yoloDetections: YoloBuildingDetection[];
   onViewerReady?: (viewer: Cesium.Viewer) => void;
@@ -54,6 +60,11 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   floorInspectionOptions,
   layers,
   elevationMode = 'none',
+  isUndergroundMode = false,
+  onToggleUndergroundMode,
+  undergroundData = null,
+  selectedUndergroundFeature = null,
+  onSelectUndergroundFeature,
   pointCloudOptions,
   yoloDetections,
   onViewerReady,
@@ -73,6 +84,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   const pointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
   const buildingEntitiesRef = useRef<Cesium.Entity[]>([]);
   const yoloEntitiesRef = useRef<Cesium.Entity[]>([]);
+  const undergroundEntitiesRef = useRef<Cesium.Entity[]>([]);
 
   const [sampledTerrainHeight, setSampledTerrainHeight] = useState<number | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
@@ -245,6 +257,12 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       handler.setInputAction((click: any) => {
         const pickedObject = viewer.scene.pick(click.position);
         if (Cesium.defined(pickedObject)) {
+          // If clicked an underground utility feature (pipe, conduit, manhole)
+          if (pickedObject.id?.undergroundFeature) {
+            onSelectUndergroundFeature?.(pickedObject.id.undergroundFeature);
+            return;
+          }
+
           // If clicked a floor slab, select that floor
           const entId: string = pickedObject.id?.id || '';
           if (entId.startsWith('floor-slab-')) {
@@ -281,9 +299,13 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           }
         }
 
-        // Also check drillPick for floor slabs behind meshes
+        // Also check drillPick for floor slabs or underground features behind meshes
         const drillObjects = viewer.scene.drillPick(click.position);
         for (const d of drillObjects) {
+          if (d.id?.undergroundFeature) {
+            onSelectUndergroundFeature?.(d.id.undergroundFeature);
+            return;
+          }
           const dId: string = d.id?.id || '';
           if (dId.startsWith('floor-slab-')) {
             const parts = dId.split('-');
@@ -458,14 +480,16 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
           heightReference: layers.terrain
             ? Cesium.HeightReference.CLAMP_TO_GROUND
             : Cesium.HeightReference.NONE,
-          color: Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.65),
+          color: isUndergroundMode
+            ? Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.18)
+            : Cesium.Color.fromCssColorString('#00f2fe').withAlpha(0.65),
           colorBlendMode: Cesium.ColorBlendMode.MIX,
-          colorBlendAmount: 0.35
+          colorBlendAmount: isUndergroundMode ? 0.85 : 0.35
         }
       });
       realBuildingEntityRef.current = bldEntity;
     }
-  }, [layers.reconstruction, layers.terrain, sampledTerrainHeight, cameraMode]);
+  }, [layers.reconstruction, layers.terrain, sampledTerrainHeight, cameraMode, isUndergroundMode]);
 
   // 5. Render OSM Building Footprints (Orange Polygons, lazy loaded in precinct mode)
   useEffect(() => {
@@ -639,6 +663,154 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     }
   }, [layers.floorVolumes, selectedBuilding, selectedFloor, floorInspectionOptions, layers.terrain, sampledTerrainHeight]);
 
+  // 8B. Subterranean Camera Collision and Depth Test Toggling for Underground Mode
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    if (isUndergroundMode) {
+      viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
+      viewer.scene.globe.depthTestAgainstTerrain = false;
+    } else {
+      viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
+      viewer.scene.globe.depthTestAgainstTerrain = true;
+    }
+  }, [isUndergroundMode]);
+
+  // 8C. Render Underground Infrastructure (Real LA County Sewer Network & Utilities)
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    undergroundEntitiesRef.current.forEach((e) => viewer.entities.remove(e));
+    undergroundEntitiesRef.current = [];
+
+    // Render if underground mode is enabled or if underground layer is toggled
+    const shouldRender = isUndergroundMode || (layers as any).underground;
+    if (!shouldRender || !undergroundData?.features || cameraMode !== 'precinct') {
+      return;
+    }
+
+    const groundAlt = layers.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
+    const newEntities: Cesium.Entity[] = [];
+
+    for (const feat of undergroundData.features) {
+      const isSelected = selectedUndergroundFeature?.id === feat.id;
+
+      // Color mapping by utility type
+      let colorHex = '#10b981'; // Green for SEWER
+      if (feat.type === 'STORM_DRAIN') colorHex = '#06b6d4'; // Cyan
+      else if (feat.type === 'WATER') colorHex = '#3b82f6'; // Blue
+      else if (feat.type === 'ELECTRIC') colorHex = '#eab308'; // Amber
+      else if (feat.type === 'GAS') colorHex = '#f97316'; // Orange
+      else if (feat.type === 'TELECOM') colorHex = '#a855f7'; // Purple
+      else if (feat.type === 'TUNNEL' || feat.type === 'SUBWAY') colorHex = '#ec4899'; // Pink
+      else if (feat.type === 'BASEMENT' || feat.type === 'PARKING') colorHex = '#64748b'; // Slate
+
+      // Calculate vertical position: authoritative depth if present; otherwise estimated visual offset
+      const depthMeters = feat.depth !== undefined ? feat.depth : (feat.estimatedVisualDepth || 3.0);
+      const featureZ = groundAlt - depthMeters;
+
+      if (feat.geometry.type === 'LineString') {
+        const coords = feat.geometry.coordinates as [number, number][];
+        if (coords.length < 2) continue;
+
+        const positionsWithHeight: number[] = [];
+        coords.forEach(([lon, lat]) => {
+          positionsWithHeight.push(lon, lat, featureZ);
+        });
+
+        // 3D Glowing Polyline utility conduit
+        const polylineEntity = viewer.entities.add({
+          id: `underground-pipe-${feat.id}`,
+          name: `${feat.type} [${feat.provenance}] - ${feat.id}`,
+          polyline: {
+            positions: Cesium.Cartesian3.fromDegreesArrayHeights(positionsWithHeight),
+            width: isSelected ? 7 : (feat.type === 'SEWER' ? 5 : 4),
+            material: new Cesium.PolylineGlowMaterialProperty({
+              glowPower: isSelected ? 0.65 : 0.35,
+              color: isSelected
+                ? Cesium.Color.WHITE
+                : Cesium.Color.fromCssColorString(colorHex)
+            })
+          }
+        });
+        (polylineEntity as any).undergroundFeature = feat;
+        newEntities.push(polylineEntity);
+
+        // Subterranean Monospace Floating HUD Label at midpoint
+        const midIdx = Math.floor(coords.length / 2);
+        const [midLon, midLat] = coords[midIdx];
+
+        const labelText = `${feat.type.replace('_', ' ')} · ${feat.provenance}\nID: ${feat.id}\n${
+          feat.depth !== undefined
+            ? `Depth: ${feat.depth}m (REAL)`
+            : `Depth: UNAVAILABLE (Est. visual offset -${depthMeters.toFixed(1)}m)`
+        }\n${feat.relationship === 'INTERSECTS_BUILDING' ? '⚡ INTERSECTS BUILDING' : feat.relationship}`;
+
+        const labelEntity = viewer.entities.add({
+          id: `underground-label-${feat.id}`,
+          position: Cesium.Cartesian3.fromDegrees(midLon, midLat, featureZ + 0.8),
+          label: {
+            text: labelText,
+            font: '10px monospace',
+            fillColor: isSelected ? Cesium.Color.WHITE : Cesium.Color.fromCssColorString(colorHex),
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            showBackground: true,
+            backgroundColor: Cesium.Color.fromCssColorString('#09090b').withAlpha(0.85),
+            backgroundPadding: new Cesium.Cartesian2(6, 4),
+            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 380)
+          }
+        });
+        (labelEntity as any).undergroundFeature = feat;
+        newEntities.push(labelEntity);
+
+      } else if (feat.geometry.type === 'Point') {
+        const [lon, lat] = feat.geometry.coordinates as [number, number];
+        const pointEntity = viewer.entities.add({
+          id: `underground-node-${feat.id}`,
+          name: `${feat.type} [${feat.provenance}] - ${feat.id}`,
+          position: Cesium.Cartesian3.fromDegrees(lon, lat, featureZ),
+          point: {
+            pixelSize: isSelected ? 16 : 10,
+            color: Cesium.Color.fromCssColorString(colorHex),
+            outlineColor: isSelected ? Cesium.Color.WHITE : Cesium.Color.BLACK,
+            outlineWidth: 2
+          },
+          label: {
+            text: `${feat.type} · ${feat.provenance}\n${feat.id}`,
+            font: '10px monospace',
+            fillColor: Cesium.Color.WHITE,
+            outlineColor: Cesium.Color.BLACK,
+            outlineWidth: 3,
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            pixelOffset: new Cesium.Cartesian2(0, -12),
+            showBackground: true,
+            backgroundColor: Cesium.Color.fromCssColorString('#09090b').withAlpha(0.85),
+            backgroundPadding: new Cesium.Cartesian2(4, 2),
+            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 300)
+          }
+        });
+        (pointEntity as any).undergroundFeature = feat;
+        newEntities.push(pointEntity);
+      }
+    }
+
+    undergroundEntitiesRef.current = newEntities;
+  }, [
+    isUndergroundMode,
+    layers,
+    undergroundData,
+    selectedUndergroundFeature,
+    cameraMode,
+    layers.terrain,
+    sampledTerrainHeight
+  ]);
+
   // 9. Camera Fly-To on Building Selection
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -796,12 +968,66 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
     });
   };
 
+  const exploreUnderground = () => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    onToggleUndergroundMode?.(true);
+    setCameraMode('precinct');
+    onCameraModeChange?.('precinct');
+
+    const targetLon = selectedBuilding ? selectedBuilding.center.longitude : centerLon;
+    const targetLat = selectedBuilding ? selectedBuilding.center.latitude : centerLat;
+    const groundAlt = layers.terrain ? (sampledTerrainHeight || 35.70) : 0.0;
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(
+        targetLon,
+        targetLat - 0.0007,
+        groundAlt - 8.0
+      ),
+      orientation: {
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(12),
+        roll: 0
+      },
+      duration: 2.2,
+      easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT
+    });
+  };
+
+  const exitUnderground = () => {
+    onToggleUndergroundMode?.(false);
+    flyToPrecinct(2.2, 'street');
+  };
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-zinc-950">
       <div ref={containerRef} className="w-full h-full" />
 
+      {/* Subterranean Underground HUD Banner */}
+      {isUndergroundMode && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex items-center gap-3 px-4 py-2 bg-emerald-950/90 backdrop-blur-xl border border-emerald-600/80 rounded-2xl shadow-2xl text-xs font-mono">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="font-bold text-emerald-200 uppercase tracking-wider">
+              Subterranean Mode Active
+            </span>
+          </div>
+          <span className="text-zinc-400 text-[11px] hidden sm:inline">
+            Camera below surface · Depth test off · Translucent building shell
+          </span>
+          <button
+            onClick={exitUnderground}
+            className="px-2.5 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold transition-all flex items-center gap-1 text-[11px] cursor-pointer"
+          >
+            <span>Exit Underground</span>
+          </button>
+        </div>
+      )}
+
       {/* Prominent Floating "Back to 3D Globe" Banner when in 3D Construction View */}
-      {cameraMode === 'precinct' && (
+      {cameraMode === 'precinct' && !isUndergroundMode && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-auto animate-fadeIn">
           <div className="flex items-center gap-2 p-1.5 bg-black/90 backdrop-blur-xl border border-zinc-700/90 rounded-2xl shadow-2xl">
             <button
@@ -854,6 +1080,20 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
         >
           <Maximize2 className="w-3.5 h-3.5" />
           <span>3D Construction</span>
+        </button>
+
+        {/* Explore Underground Subterranean Mode Toggle */}
+        <button
+          onClick={isUndergroundMode ? exitUnderground : exploreUnderground}
+          title={isUndergroundMode ? 'Exit Underground Subterranean View' : 'Explore Subterranean Infrastructure Corridors'}
+          className={`py-1.5 px-3 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all border ${
+            isUndergroundMode
+              ? 'bg-emerald-500 text-black border-emerald-400 shadow-md animate-pulse'
+              : 'bg-zinc-900/80 text-emerald-400 border-emerald-900/60 hover:bg-emerald-950 hover:text-emerald-300'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>{isUndergroundMode ? 'Exit Underground' : 'Explore Underground'}</span>
         </button>
 
         {/* Specific Building Navigator Quick-Toggle */}

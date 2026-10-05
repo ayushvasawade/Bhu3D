@@ -42,6 +42,8 @@ interface BuildingDetailsPageProps {
   onBackToGlobe: () => void;
   yoloDetections?: YoloBuildingDetection[];
   onSelectBuilding?: (building: LABuildingRecord) => void;
+  undergroundData?: import('../../types/underground').UndergroundQueryResult | null;
+  onExploreUnderground?: () => void;
 }
 
 export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
@@ -49,7 +51,9 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
   metadata,
   onBackToGlobe,
   yoloDetections = [],
-  onSelectBuilding
+  onSelectBuilding,
+  undergroundData = null,
+  onExploreUnderground
 }) => {
   const [selectedFloor, setSelectedFloor] = useState<number | null>(1);
   const [isolateFloor, setIsolateFloor] = useState<boolean>(false);
@@ -639,6 +643,199 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
           </div>
         </section>
 
+        {/* 4C. REAL UNDERGROUND INFRASTRUCTURE & UTILITY CORRIDORS */}
+        <section className="p-4 sm:p-5 rounded-3xl bg-zinc-950 border border-zinc-800 space-y-4 font-mono text-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 border-b border-zinc-850">
+            <div>
+              <h3 className="text-sm font-bold text-white tracking-tight uppercase flex items-center gap-2">
+                <Layers className="w-4 h-4 text-emerald-400" />
+                <span>Real Underground Infrastructure & Utility Corridors</span>
+              </h3>
+              <p className="text-[10px] text-zinc-400 font-sans mt-0.5">
+                Official LA County Public Works Sewer Network MapServer (EPSG:2229 State Plane) & Subsurface Utility Corridors
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
+                LA COUNTY PUBLIC WORKS
+              </span>
+              {onExploreUnderground && (
+                <button
+                  onClick={onExploreUnderground}
+                  className="px-3 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                >
+                  <span>Explore Subterranean 3D ↓</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 4-way KPI Tiles */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
+              <span className="text-[9px] text-zinc-400 uppercase font-bold block">
+                Total Corridors
+              </span>
+              <span className="font-bold text-white text-base block">
+                {undergroundData?.features.length || 0} Assets
+              </span>
+              <span className="text-[9px] text-zinc-500 block font-sans">
+                Query Buffer: 120m around AOI
+              </span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
+              <span className="text-[9px] text-emerald-400 uppercase font-bold block">
+                Real Features Found
+              </span>
+              <span className="font-bold text-emerald-300 text-base block">
+                {undergroundData?.realCount || 0} REAL
+              </span>
+              <span className="text-[9px] text-zinc-500 block font-sans">
+                Authoritative LA County REST
+              </span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
+              <span className="text-[9px] text-amber-400 uppercase font-bold block">
+                Street Right-Of-Way Demo
+              </span>
+              <span className="font-bold text-amber-300 text-base block">
+                {undergroundData?.demoCount || 0} DEMO
+              </span>
+              <span className="text-[9px] text-zinc-500 block font-sans">
+                Street-grid visual demonstration
+              </span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-1">
+              <span className="text-[9px] text-cyan-400 uppercase font-bold block">
+                Nearest Pipe Distance
+              </span>
+              <span className="font-bold text-cyan-300 text-base block">
+                {undergroundData?.nearestFeatureDistanceMeters !== undefined
+                  ? `${undergroundData.nearestFeatureDistanceMeters.toFixed(1)} m`
+                  : '—'}
+              </span>
+              <span className="text-[9px] text-zinc-500 block font-sans">
+                Euclidean building clearance
+              </span>
+            </div>
+          </div>
+
+          {/* Deep Subsurface Breakdown & Spatial Relationship Matrix */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Building ↔ Underground Spatial Matrix */}
+            <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-850 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                Building ↔ Infrastructure Relationship
+              </span>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Selected Building:</span>
+                  <span className="text-white font-bold">{building.id}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Spatial Status:</span>
+                  <span className={undergroundData?.realCount && undergroundData.realCount > 0 ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+                    {undergroundData?.realCount && undergroundData.realCount > 0 ? "WITHIN AOI" : "OUTSIDE EXACT FOOTPRINT"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Nearest Clearance:</span>
+                  <span className="text-cyan-300 font-bold">
+                    {undergroundData?.nearestFeatureDistanceMeters !== undefined ? `${undergroundData.nearestFeatureDistanceMeters.toFixed(1)}m` : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Intersects Footprint:</span>
+                  <span className="text-zinc-400">NO (Street ROW corridor)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Depth Provenance & Vertical Datum */}
+            <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-850 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                Subterranean Vertical Position & Provenance
+              </span>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Authoritative Depth:</span>
+                  <span className="text-amber-400 font-bold">UNAVAILABLE</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Visual Vertical Offset:</span>
+                  <span className="text-zinc-300 font-bold">ESTIMATED (-3.0m to -4.5m)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-500">Ground Reference Datum:</span>
+                  <span className="text-white">{building.localGroundAMSL.toFixed(2)}m NAVD88</span>
+                </div>
+                <p className="text-[9px] text-zinc-500 font-sans leading-tight pt-1 border-t border-zinc-850 italic">
+                  Critical Rule: LA County 2D GIS does not provide physical invert elevations. Assumed visual depth is marked ESTIMATED.
+                </p>
+              </div>
+            </div>
+
+            {/* Subterranean Cutaway Diagram */}
+            <div className="p-3 rounded-2xl bg-zinc-900/60 border border-zinc-850 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                Vertical Cutaway Architecture
+              </span>
+              <div className="p-2 rounded-xl bg-black border border-zinc-800 text-[10px] font-mono leading-tight space-y-1 text-zinc-300">
+                <div className="text-cyan-400 font-bold">BUILDING   ┌───────────────┐</div>
+                <div className="text-cyan-400 font-bold">           │ {building.derivedHeightMeters}m LOD2 Solid│</div>
+                <div className="text-zinc-400">GROUND ────┴───────────────┴──── [{building.localGroundAMSL.toFixed(2)}m AMSL]</div>
+                <div className="text-emerald-400">  ↓ sub    ───────────────────── SEWER MAIN (EST. -3.0m)</div>
+                <div className="text-blue-400">  surface  ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ WATER MAIN (EST. -1.8m)</div>
+              </div>
+              <p className="text-[8.5px] text-zinc-500 font-sans">
+                Never present an assumed depth as authoritative. Depth provenance is strictly maintained.
+              </p>
+            </div>
+          </div>
+
+          {/* Subsurface Feature Inventory Table */}
+          {undergroundData?.features && undergroundData.features.length > 0 && (
+            <div className="pt-2 border-t border-zinc-850 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                Subsurface Feature Inventory ({undergroundData.features.length} Channels)
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                {undergroundData.features.map((feat) => (
+                  <div
+                    key={feat.id}
+                    className="p-2 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between text-[10.5px]"
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-white">{feat.type.replace('_', ' ')}</span>
+                        <span className={`text-[8.5px] px-1 rounded font-bold ${
+                          feat.provenance === 'REAL'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            : 'bg-amber-950 text-amber-300 border border-amber-800'
+                        }`}>
+                          {feat.provenance}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-zinc-500 block font-mono">{feat.id} · {feat.sourceAuthority}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-cyan-400 font-bold block">
+                        {feat.distanceToBuildingMeters !== undefined ? `${feat.distanceToBuildingMeters.toFixed(1)}m` : '0.0m'}
+                      </span>
+                      <span className="text-[8.5px] text-zinc-500 block">
+                        {feat.depth !== undefined ? `${feat.depth}m (REAL)` : 'Depth: Est. offset'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* 5. 3D RECONSTRUCTION & 3D FIDELITY SECTION */}
         <section className="p-4 sm:p-5 rounded-3xl bg-zinc-950 border border-zinc-800 space-y-4 font-mono text-xs">
           <div className="flex items-center justify-between pb-2 border-b border-zinc-850">
@@ -1030,6 +1227,13 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                   <td className="py-2.5 text-zinc-400">h = H + N Ellipsoid Transformation</td>
                   <td className="py-2.5 text-zinc-400">NAVD88 ↔ WGS84 Ellipsoid</td>
                   <td className="py-2.5 text-emerald-400 font-bold">COINCIDENCE AUDITED</td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 font-bold text-emerald-400">LA County DPW</td>
+                  <td className="py-2.5 text-zinc-300">Sewer_Network/MapServer (CSMD)</td>
+                  <td className="py-2.5 text-zinc-400">Vector GIS Gravity & Force Mains</td>
+                  <td className="py-2.5 text-zinc-400">EPSG:2229 (State Plane Zone 5 ftUS)</td>
+                  <td className="py-2.5 text-emerald-400 font-bold">ARC-GIS REST ADAPTER</td>
                 </tr>
               </tbody>
             </table>

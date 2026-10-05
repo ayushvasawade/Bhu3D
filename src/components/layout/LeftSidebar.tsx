@@ -26,6 +26,7 @@ export interface LayerVisibilityState {
   validation: boolean;
   floorVolumes: boolean;
   terrain: boolean;
+  underground: boolean;
 }
 
 interface LeftSidebarProps {
@@ -43,6 +44,12 @@ interface LeftSidebarProps {
   cameraMode?: 'global' | 'precinct';
   onFlyToGlobal?: () => void;
   onFlyToPrecinct?: () => void;
+  isUndergroundMode?: boolean;
+  onToggleUndergroundMode?: (enabled: boolean) => void;
+  onOpenUndergroundPanel?: () => void;
+  undergroundRealCount?: number;
+  undergroundEstimatedCount?: number;
+  undergroundDemoCount?: number;
 }
 
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
@@ -59,7 +66,13 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   isYoloRunning = false,
   cameraMode = 'global',
   onFlyToGlobal,
-  onFlyToPrecinct
+  onFlyToPrecinct,
+  isUndergroundMode = false,
+  onToggleUndergroundMode,
+  onOpenUndergroundPanel,
+  undergroundRealCount = 0,
+  undergroundEstimatedCount = 0,
+  undergroundDemoCount = 4
 }) => {
   return (
     <aside className="gis-glass-panel rounded-3xl p-4 w-72 sm:w-80 shadow-2xl pointer-events-auto border border-zinc-800 transition-all duration-300 flex flex-col gap-4 select-none max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar">
@@ -408,6 +421,85 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             {layers.terrain ? 'ON' : 'OFF'}
           </span>
         </button>
+      </div>
+
+      {/* SECTION 4: UNDERGROUND INFRASTRUCTURE (LA County Public Works & Substructure) */}
+      <div className="space-y-2 pt-2 border-t border-zinc-850">
+        <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold px-1">
+          <span className="flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-emerald-400" />
+            <span>UNDERGROUND</span>
+          </span>
+          <span className="text-[9px] text-emerald-400 font-bold">SUBTERRANEAN</span>
+        </div>
+
+        {/* Explore / Exit Underground Master Toggle Button */}
+        <button
+          onClick={() => onToggleUndergroundMode?.(!isUndergroundMode)}
+          className={`w-full p-2.5 rounded-2xl border text-left text-xs font-mono transition-all flex items-center justify-between shadow-md cursor-pointer ${
+            isUndergroundMode
+              ? 'bg-emerald-500 text-black border-emerald-400 font-bold animate-pulse'
+              : 'bg-zinc-900/90 text-white border-zinc-700 hover:border-emerald-500'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${isUndergroundMode ? 'bg-black animate-ping' : 'bg-emerald-400'}`} />
+            <div>
+              <span className="font-bold block leading-tight">
+                {isUndergroundMode ? 'Exit Underground' : 'Explore Underground'}
+              </span>
+              <span className={`text-[9px] ${isUndergroundMode ? 'text-emerald-950 font-semibold' : 'text-zinc-400'} font-sans`}>
+                Sub-surface camera & transparent shell
+              </span>
+            </div>
+          </div>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            isUndergroundMode ? 'bg-black text-emerald-300' : 'bg-zinc-950 text-emerald-400 border border-emerald-800'
+          }`}>
+            {isUndergroundMode ? 'ACTIVE' : 'ENTER'}
+          </span>
+        </button>
+
+        {/* 4.1 Underground Utility Corridors Layer Toggle */}
+        <button
+          onClick={() => onToggleLayer('underground')}
+          className={`w-full p-2 rounded-2xl border text-left text-xs font-mono transition-all flex items-center justify-between cursor-pointer ${
+            layers.underground
+              ? 'bg-zinc-900 text-white border-emerald-700 shadow-sm'
+              : 'bg-zinc-950/60 text-zinc-500 border-zinc-850 hover:text-zinc-300'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <div className={`w-4 h-4 flex items-center justify-center font-bold text-[11px] ${layers.underground ? 'text-emerald-400' : 'text-zinc-600'}`}>
+              ⎇
+            </div>
+            <div>
+              <span className="font-semibold block leading-tight">Utility Corridors</span>
+              <span className="text-[9px] text-zinc-400 font-sans">Sewer, Water, Electric, Storm</span>
+            </div>
+          </div>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            layers.underground ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-zinc-900 text-zinc-600'
+          }`}>
+            {layers.underground ? 'ON' : 'OFF'}
+          </span>
+        </button>
+
+        {/* Provenance & Feature Count Summary Pill */}
+        <div className="p-2 rounded-xl bg-zinc-950/90 border border-zinc-800 flex items-center justify-between text-[10px] font-mono">
+          <div className="flex items-center gap-1.5">
+            <span className="text-zinc-400">LA County DPW:</span>
+            <span className="text-emerald-400 font-bold">{undergroundRealCount} Real</span>
+            <span className="text-zinc-600">·</span>
+            <span className="text-amber-400 font-bold">{undergroundDemoCount} Demo</span>
+          </div>
+          <button
+            onClick={onOpenUndergroundPanel}
+            className="text-cyan-400 hover:text-cyan-300 underline font-bold cursor-pointer text-[9px]"
+          >
+            Inspect Panel →
+          </button>
+        </div>
       </div>
 
       {/* Building Quick Selector */}

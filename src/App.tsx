@@ -11,6 +11,9 @@ import { yoloService } from './services/yoloSegmentationService';
 import { buildingFusionService } from './services/buildingFusionService';
 import { useRouter } from './router/useRouter';
 import { BuildingDetailsPage } from './components/building/BuildingDetailsPage';
+import { UndergroundFeature, UndergroundQueryResult, UndergroundType } from './types/underground';
+import { undergroundService } from './services/undergroundInfrastructureService';
+import { UndergroundInfrastructurePanel } from './components/underground/UndergroundInfrastructurePanel';
 import * as Cesium from 'cesium';
 
 export function App() {
@@ -28,8 +31,16 @@ export function App() {
   // Elevation Mode State: 'none' | 'dem' | 'dsm' | 'ndsm'
   const [elevationMode, setElevationMode] = useState<ElevationMode>('none');
 
+  // Underground Infrastructure State
+  const [isUndergroundMode, setIsUndergroundMode] = useState<boolean>(false);
+  const [isUndergroundPanelOpen, setIsUndergroundPanelOpen] = useState<boolean>(false);
+  const [undergroundData, setUndergroundData] = useState<UndergroundQueryResult | null>(null);
+  const [selectedUndergroundFeature, setSelectedUndergroundFeature] = useState<UndergroundFeature | null>(null);
+  const [undergroundFilterType, setUndergroundFilterType] = useState<UndergroundType | 'ALL'>('ALL');
+  const [isUndergroundLoading, setIsUndergroundLoading] = useState<boolean>(false);
+
   // Default Layer Visibility (3D Construction Active by Default)
-  // Satellite ✓, LiDAR ✓, OSM ✓, 3D Mesh (Reconstruction) ✓, YOLO ✗, Validation ✗, Floor Volumes ✗
+  // Satellite ✓, LiDAR ✓, OSM ✓, 3D Mesh (Reconstruction) ✓, YOLO ✗, Validation ✗, Floor Volumes ✗, Underground ✓
   const [layers, setLayers] = useState<LayerVisibilityState>({
     satellite: true,
     lidar: true,
@@ -38,7 +49,8 @@ export function App() {
     yolo: false,
     validation: false,
     floorVolumes: false,
-    terrain: false
+    terrain: false,
+    underground: true
   });
 
   // Point Cloud Options
@@ -135,6 +147,34 @@ export function App() {
         console.error('[App] Failed to load LA USGS LiDAR metadata:', err);
       });
   }, []);
+
+  // Fetch Real Underground Infrastructure (LA County Public Works ArcGIS REST)
+  useEffect(() => {
+    let isCancelled = false;
+    setIsUndergroundLoading(true);
+    undergroundService.getUndergroundInfrastructure(selectedBuilding)
+      .then((res) => {
+        if (!isCancelled) {
+          setUndergroundData(res);
+          setIsUndergroundLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.error('[App] Failed to load underground infrastructure:', err);
+        if (!isCancelled) setIsUndergroundLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedBuilding]);
+
+  const handleToggleUndergroundMode = (enabled: boolean) => {
+    setIsUndergroundMode(enabled);
+    if (enabled && cameraMode !== 'precinct') {
+      setCameraMode('precinct');
+    }
+  };
 
   // Layer Visibility Toggle Handler
   const handleToggleLayer = (key: keyof LayerVisibilityState) => {
@@ -263,6 +303,13 @@ export function App() {
             setSelectedBuilding(bld);
             navigateToBuilding(bld.osmWayId || bld.id);
           }}
+          undergroundData={undergroundData}
+          onExploreUnderground={() => {
+            setSelectedBuilding(routeBuilding);
+            setCameraMode('precinct');
+            setIsUndergroundMode(true);
+            navigateToGlobe();
+          }}
         />
       );
     }
@@ -322,6 +369,11 @@ export function App() {
             floorInspectionOptions={floorInspectionOptions}
             layers={layers}
             elevationMode={elevationMode}
+            isUndergroundMode={isUndergroundMode}
+            onToggleUndergroundMode={handleToggleUndergroundMode}
+            undergroundData={undergroundData}
+            selectedUndergroundFeature={selectedUndergroundFeature}
+            onSelectUndergroundFeature={setSelectedUndergroundFeature}
             pointCloudOptions={pointCloudOptions}
             yoloDetections={yoloDetections}
             onViewerReady={(v) => { cesiumViewerRef.current = v; }}
@@ -334,7 +386,7 @@ export function App() {
           />
         </main>
 
-        {/* Left Sidebar: DATA, ANALYSIS, CADASTRE (Phase 7 Design) */}
+        {/* Left Sidebar: DATA, ANALYSIS, CADASTRE, UNDERGROUND */}
         <div className="absolute top-20 left-5 z-20 pointer-events-auto">
           <LeftSidebar
             layers={layers}
@@ -357,6 +409,12 @@ export function App() {
             cameraMode={cameraMode}
             onFlyToGlobal={handleFlyToGlobal}
             onFlyToPrecinct={() => handleFlyToPrecinct('overview')}
+            isUndergroundMode={isUndergroundMode}
+            onToggleUndergroundMode={handleToggleUndergroundMode}
+            onOpenUndergroundPanel={() => setIsUndergroundPanelOpen(true)}
+            undergroundRealCount={undergroundData?.realCount || 0}
+            undergroundEstimatedCount={undergroundData?.estimatedCount || 0}
+            undergroundDemoCount={undergroundData?.demoCount || 0}
           />
         </div>
 
@@ -397,8 +455,34 @@ export function App() {
               onOpenDetailsPage={(bld) => {
                 navigateToBuilding(bld.osmWayId || bld.id);
               }}
+              undergroundData={undergroundData}
+              onExploreUnderground={() => {
+                setIsUndergroundMode(true);
+              }}
             />
           </div>
+        )}
+
+        {/* Dedicated Underground Infrastructure Panel Modal / Drawer */}
+        {isUndergroundPanelOpen && (
+          <UndergroundInfrastructurePanel
+            queryResult={undergroundData}
+            selectedFeature={selectedUndergroundFeature}
+            onSelectFeature={(feat) => {
+              setSelectedUndergroundFeature(feat);
+              if (feat && !isUndergroundMode) {
+                setIsUndergroundMode(true);
+              }
+            }}
+            isUndergroundMode={isUndergroundMode}
+            onToggleUndergroundMode={handleToggleUndergroundMode}
+            onExploreUnderground={() => handleToggleUndergroundMode(true)}
+            onExitUnderground={() => handleToggleUndergroundMode(false)}
+            onClose={() => setIsUndergroundPanelOpen(false)}
+            filterType={undergroundFilterType}
+            onChangeFilterType={setUndergroundFilterType}
+            selectedBuilding={selectedBuilding}
+          />
         )}
       </div>
     </ErrorBoundary>

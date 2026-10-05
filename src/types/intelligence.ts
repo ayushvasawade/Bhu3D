@@ -114,6 +114,16 @@ export interface PropertyPassportData {
   generatedTimestamp: string;
   version: string;
   verificationUrl: string;
+  undergroundInfrastructure?: {
+    source: string;
+    featuresCount: number;
+    realCount: number;
+    depthStatus: 'AVAILABLE' | 'UNAVAILABLE' | 'ESTIMATED';
+    nearestInfrastructureDistanceMeters?: number;
+    nearestInfrastructureType?: string;
+    provenance: 'REAL' | 'DERIVED' | 'ESTIMATED' | 'DEMO' | 'UNAVAILABLE';
+    statusText: string;
+  };
 }
 
 export type MeasurementType = 'distance' | 'height' | 'area' | 'volume';
