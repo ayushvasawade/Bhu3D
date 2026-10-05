@@ -4,7 +4,7 @@ import { LeftSidebar, LayerVisibilityState } from './components/layout/LeftSideb
 import { CesiumViewer } from './components/globe/CesiumViewer';
 import { LABuildingCard } from './components/lidar/LABuildingCard';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
-import { LABuildingRecord, LADatasetMetadata, FloorInspectionOptions, PointCloudRenderOptions } from './types/lidar';
+import { LABuildingRecord, LADatasetMetadata, FloorInspectionOptions, PointCloudRenderOptions, ElevationMode } from './types/lidar';
 import { YoloBuildingDetection } from './types/yolo';
 import { lidarService } from './services/lidarService';
 import { yoloService } from './services/yoloSegmentationService';
@@ -24,6 +24,9 @@ export function App() {
   const [laMetadata, setLaMetadata] = useState<LADatasetMetadata | null>(null);
   const [selectedBuilding, setSelectedBuilding] = useState<LABuildingRecord | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
+
+  // Elevation Mode State: 'none' | 'dem' | 'dsm' | 'ndsm'
+  const [elevationMode, setElevationMode] = useState<ElevationMode>('none');
 
   // Default Layer Visibility (3D Construction Active by Default)
   // Satellite ✓, LiDAR ✓, OSM ✓, 3D Mesh (Reconstruction) ✓, YOLO ✗, Validation ✗, Floor Volumes ✗
@@ -318,6 +321,7 @@ export function App() {
             onSelectFloor={handleSelectFloor}
             floorInspectionOptions={floorInspectionOptions}
             layers={layers}
+            elevationMode={elevationMode}
             pointCloudOptions={pointCloudOptions}
             yoloDetections={yoloDetections}
             onViewerReady={(v) => { cesiumViewerRef.current = v; }}
@@ -335,6 +339,8 @@ export function App() {
           <LeftSidebar
             layers={layers}
             onToggleLayer={handleToggleLayer}
+            elevationMode={elevationMode}
+            onChangeElevationMode={setElevationMode}
             buildings={laMetadata?.buildings || []}
             selectedBuilding={selectedBuilding}
             onSelectBuilding={(bld) => {

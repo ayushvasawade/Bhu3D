@@ -8,9 +8,10 @@ import {
   Building,
   Box,
   Scan,
-  Compass
+  Compass,
+  Mountain
 } from 'lucide-react';
-import { LABuildingRecord, FloorInspectionOptions } from '../../types/lidar';
+import { LABuildingRecord, FloorInspectionOptions, ElevationMode } from '../../types/lidar';
 import { YoloBuildingDetection } from '../../types/yolo';
 import { lidarService } from '../../services/lidarService';
 
@@ -36,11 +37,14 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const baseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
+  const elevationOverlayRef = useRef<Cesium.ImageryLayer | null>(null);
   const modelEntityRef = useRef<Cesium.Entity | null>(null);
   const osmEntityRef = useRef<Cesium.Entity | null>(null);
   const pointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
   const floorEntitiesRef = useRef<Cesium.Entity[]>([]);
   const yoloEntityRef = useRef<Cesium.Entity | null>(null);
+
+  const [elevationMode, setElevationMode] = useState<ElevationMode>('none');
 
   // Layer Toggles on Detail Viewer
   const [layers, setLayers] = useState({
@@ -218,6 +222,45 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
       baseLayerRef.current.show = layers.satellite;
     }
   }, [layers.satellite]);
+
+  // Elevation Mode Raster Overlay
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    if (elevationOverlayRef.current) {
+      viewer.imageryLayers.remove(elevationOverlayRef.current);
+      elevationOverlayRef.current = null;
+    }
+
+    if (elevationMode && elevationMode !== 'none') {
+      const imgMap: Record<string, string> = {
+        dem: '/data/lidar/dem/dem_surface.png',
+        dsm: '/data/lidar/dsm/dsm_surface.png',
+        ndsm: '/data/lidar/ndsm/ndsm_surface.png'
+      };
+
+      const imageUrl = imgMap[elevationMode];
+      if (imageUrl) {
+        const elevationRectangle = Cesium.Rectangle.fromDegrees(
+          -118.26394432831962,
+          34.03520531945292,
+          -118.25786138637235,
+          34.03898454898699
+        );
+
+        const provider = new Cesium.SingleTileImageryProvider({
+          url: imageUrl,
+          rectangle: elevationRectangle
+        });
+
+        const layer = viewer.imageryLayers.addImageryProvider(provider);
+        layer.alpha = elevationMode === 'ndsm' ? 0.92 : 0.85;
+        layer.show = true;
+        elevationOverlayRef.current = layer;
+      }
+    }
+  }, [elevationMode]);
 
   // 3D Reconstructed Mesh
   useEffect(() => {
@@ -515,6 +558,27 @@ export const BuildingDetailViewer: React.FC<BuildingDetailViewerProps> = ({
         >
           <Satellite className="w-3.5 h-3.5" />
           <span>Satellite</span>
+        </button>
+
+        <button
+          onClick={() => {
+            const modes: ElevationMode[] = ['none', 'dem', 'dsm', 'ndsm'];
+            const next = modes[(modes.indexOf(elevationMode) + 1) % modes.length];
+            setElevationMode(next);
+          }}
+          className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1 ${
+            elevationMode !== 'none'
+              ? elevationMode === 'dem'
+                ? 'bg-emerald-500 text-black shadow-sm'
+                : elevationMode === 'dsm'
+                ? 'bg-purple-500 text-white shadow-sm'
+                : 'bg-amber-500 text-black shadow-sm'
+              : 'text-zinc-400 hover:text-white bg-zinc-900'
+          }`}
+          title="Toggle DEM / DSM / nDSM Elevation Raster Overlay"
+        >
+          <Mountain className="w-3.5 h-3.5" />
+          <span>{elevationMode === 'none' ? 'Elev: OFF' : elevationMode.toUpperCase()}</span>
         </button>
 
         <button

@@ -1,0 +1,35 @@
+{
+  "sourceDataset": "USGS 3DEP LiDAR - Los Angeles South Park Precinct",
+  "sourceFile": "f8601d6d-142b-4343-abd0-84d85e09b02b.laz",
+  "crs": {
+    "horizontal": "EPSG:3857 (Web Mercator)",
+    "geographic": "EPSG:4326 (WGS84)",
+    "verticalDatum": "NAVD88 (Meters AMSL)"
+  },
+  "resolutionMeters": 1.0,
+  "gridDimensions": {
+    "columns": 563,
+    "rows": 422
+  },
+  "boundsWGS84": {
+    "west": -118.26394432831962,
+    "south": 34.03520531945292,
+    "east": -118.25786138637235,
+    "north": 34.03898454898699
+  },
+  "boundsEPSG3857": {
+    "minX": -13165082.06,
+    "minY": 4033530.22,
+    "maxX": -13164404.91,
+    "maxY": 4034037.9
+  },
+  "generatedAt": "2026-10-05T09:55:16.037595Z",
+  "provenance": "DERIVED",
+  "source": "REAL LiDAR",
+  "layer": "nDSM",
+  "imageFile": "/data/lidar/ndsm/ndsm_surface.png",
+  "heightRangeMeters": {
+    "min": 0.0,
+    "max": 55.89
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-10-05T09:55:27.147864Z",
+  "sourceDataset": "USGS 3DEP LiDAR - Los Angeles South Park Precinct",
+  "sourceFile": "f8601d6d-142b-4343-abd0-84d85e09b02b.laz",
+  "provenance": "DERIVED",
+  "source": "REAL LiDAR",
+  "disclaimer": "Derived from REAL LiDAR. Not official cadastral/ULPIN elevation data.",
+  "crs": {
+    "horizontal": "EPSG:3857 (Web Mercator)",
+    "geographic": "EPSG:4326 (WGS84)",
+    "verticalDatum": "NAVD88 (Meters AMSL)",
+    "geoidSeparationMeters": -35.74
+  },
+  "lidarValidation": {
+    "totalSurveyPoints": 3495906,
+    "groundPointsCount": 1313041,
+    "groundPointPercentage": 37.56,
+    "surfacePointsCount": 3495644,
+    "noisePointsExcluded": 262,
+    "groundFilterMethod": "ASPRS_CLASS_2_STANDARD_GROUND"
+  },
+  "rasterValidation": {
+    "gridColumns": 563,
+    "gridRows": 422,
+    "totalGridCells": 237586,
+    "resolutionMeters": 1.0,
+    "boundsWGS84": {
+      "west": -118.26394432831962,
+      "south": 34.03520531945292,
+      "east": -118.25786138637235,
+      "north": 34.03898454898699
+    },
+    "demStats": {
+      "minAMSL": 69.03,
+      "maxAMSL": 74.38,
+      "meanAMSL": 72.32,
+      "stdAMSL": 0.82
+    },
+    "dsmStats": {
+      "minAMSL": 69.87,
+      "maxAMSL": 129.56,
+      "meanAMSL": 79.38,
+      "stdAMSL": 9.9
+    },
+    "ndsmStats": {
+      "minHeightMeters": 0.0,
+      "maxHeightMeters": 55.89,
+      "meanHeightMeters": 7.05,
+      "stdHeightMeters": 9.7
+    },
+    "noDataPercentage": 0.0
+  },
+  "buildingHeightValidation": {
+    "buildingsProcessed": 128,
+    "meanHeightDifferenceMeters": 1.02,
+    "medianHeightDifferenceMeters": 0.64,
+    "maxHeightDifferenceMeters": 7.53,
+    "pctWithinOneMeter": 70.31,
+    "pctWithinTwoMeters": 90.62
+  },
+  "outputFiles": {
+    "demImage": "/data/lidar/dem/dem_surface.png",
+    "demManifest": "/data/lidar/dem/dem_manifest.json",
+    "dsmImage": "/data/lidar/dsm/dsm_surface.png",
+    "dsmManifest": "/data/lidar/dsm/dsm_manifest.json",
+    "ndsmImage": "/data/lidar/ndsm/ndsm_surface.png",
+    "ndsmManifest": "/data/lidar/ndsm/ndsm_manifest.json",
+    "enrichedMetadata": "/data/la_usgs_buildings_metadata.json"
+  },
+  "limitations": [
+    "Ground interpolation uses linear Delaunay triangulation beneath dense high-rise building clusters.",
+    "nDSM represents top-of-surface returns; sub-meter rooftop HVAC or antennas may contribute to max DSM returns.",
+    "Elevation values are derived from airborne LiDAR pulses and do not substitute for terrestrial engineering survey or official government cadastral titles."
+  ]
+}

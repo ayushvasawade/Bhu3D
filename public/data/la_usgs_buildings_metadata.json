@@ -203,6 +203,20 @@
             "residualRMSE": 0.79
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.98,
+        "dsmRoofAMSL": 127.37,
+        "lidarHeightMeters": 53.95,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 49.19,
+        "ndsmMaxHeight": 55.89,
+        "ndsmP95Height": 53.42,
+        "heightDifference": 0.53,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 3855
       }
     },
     {
@@ -490,6 +504,20 @@
             "residualRMSE": 0.16
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.87,
+        "dsmRoofAMSL": 123.85,
+        "lidarHeightMeters": 49.68,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 49.3,
+        "ndsmMaxHeight": 50.44,
+        "ndsmP95Height": 49.9,
+        "heightDifference": 0.22,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.8,
+        "sampledCells": 149
       }
     },
     {
@@ -623,6 +651,20 @@
             "residualRMSE": 0.48
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.93,
+        "dsmRoofAMSL": 101.99,
+        "lidarHeightMeters": 29.66,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 25.83,
+        "ndsmMaxHeight": 30.08,
+        "ndsmP95Height": 28.83,
+        "heightDifference": 0.83,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 2622
       }
     },
     {
@@ -789,6 +831,20 @@
             "residualRMSE": 0.63
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.35,
+        "dsmRoofAMSL": 99.08,
+        "lidarHeightMeters": 29.61,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 25.98,
+        "ndsmMaxHeight": 29.96,
+        "ndsmP95Height": 28.07,
+        "heightDifference": 1.54,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 2600
       }
     },
     {
@@ -922,6 +978,20 @@
             "residualRMSE": 0.47
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.11,
+        "dsmRoofAMSL": 102.38,
+        "lidarHeightMeters": 29.55,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 26.02,
+        "ndsmMaxHeight": 29.56,
+        "ndsmP95Height": 29.13,
+        "heightDifference": 0.42,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.8,
+        "sampledCells": 130
       }
     },
     {
@@ -1068,6 +1138,20 @@
             "residualRMSE": 0.39
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.8,
+        "dsmRoofAMSL": 99.83,
+        "lidarHeightMeters": 29.45,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 25.58,
+        "ndsmMaxHeight": 30.37,
+        "ndsmP95Height": 27.43,
+        "heightDifference": 2.02,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.91,
+        "sampledCells": 4275
       }
     },
     {
@@ -1218,6 +1302,20 @@
             "residualRMSE": 0.34
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.84,
+        "dsmRoofAMSL": 101.19,
+        "lidarHeightMeters": 29.04,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 25.38,
+        "ndsmMaxHeight": 29.08,
+        "ndsmP95Height": 28.35,
+        "heightDifference": 0.69,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 1979
       }
     },
     {
@@ -1383,6 +1481,20 @@
             "residualRMSE": 0.21
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.02,
+        "dsmRoofAMSL": 99.25,
+        "lidarHeightMeters": 28.29,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 24.89,
+        "ndsmMaxHeight": 28.33,
+        "ndsmP95Height": 26.25,
+        "heightDifference": 2.04,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.91,
+        "sampledCells": 4091
       }
     },
     {
@@ -1557,6 +1669,20 @@
             "residualRMSE": 0.63
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.05,
+        "dsmRoofAMSL": 98.59,
+        "lidarHeightMeters": 28.13,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 24.68,
+        "ndsmMaxHeight": 29.57,
+        "ndsmP95Height": 27.62,
+        "heightDifference": 0.51,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 4759
       }
     },
     {
@@ -1711,6 +1837,20 @@
             "residualRMSE": 3.17
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.48,
+        "dsmRoofAMSL": 99.85,
+        "lidarHeightMeters": 27.53,
+        "ndsmMinHeight": 6.18,
+        "ndsmMedianHeight": 22.23,
+        "ndsmMaxHeight": 36.54,
+        "ndsmP95Height": 27.2,
+        "heightDifference": 0.33,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 2612
       }
     },
     {
@@ -1836,6 +1976,20 @@
             "residualRMSE": 0.42
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.63,
+        "dsmRoofAMSL": 100.82,
+        "lidarHeightMeters": 26.53,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 26.13,
+        "ndsmMaxHeight": 27.23,
+        "ndsmP95Height": 27.22,
+        "heightDifference": 0.69,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.79,
+        "sampledCells": 23
       }
     },
     {
@@ -1968,6 +2122,20 @@
             "residualRMSE": 1.46
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.92,
+        "dsmRoofAMSL": 95.43,
+        "lidarHeightMeters": 21.06,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 19.05,
+        "ndsmMaxHeight": 29.17,
+        "ndsmP95Height": 22.09,
+        "heightDifference": 1.03,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 8859
       }
     },
     {
@@ -2116,6 +2284,20 @@
             "residualRMSE": 1.68
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.93,
+        "dsmRoofAMSL": 92.42,
+        "lidarHeightMeters": 19.55,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 16.06,
+        "ndsmMaxHeight": 25.53,
+        "ndsmP95Height": 19.53,
+        "heightDifference": 0.02,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.87,
+        "sampledCells": 169
       }
     },
     {
@@ -2244,6 +2426,20 @@
             "residualRMSE": 0.61
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.85,
+        "dsmRoofAMSL": 87.7,
+        "lidarHeightMeters": 18.08,
+        "ndsmMinHeight": 2.3,
+        "ndsmMedianHeight": 14.7,
+        "ndsmMaxHeight": 19.74,
+        "ndsmP95Height": 16.91,
+        "heightDifference": 1.17,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 520
       }
     },
     {
@@ -2369,6 +2565,20 @@
             "residualRMSE": 0.88
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.47,
+        "dsmRoofAMSL": 89.26,
+        "lidarHeightMeters": 17.8,
+        "ndsmMinHeight": 2.87,
+        "ndsmMedianHeight": 13.9,
+        "ndsmMaxHeight": 18.67,
+        "ndsmP95Height": 16.85,
+        "heightDifference": 0.95,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 802
       }
     },
     {
@@ -2526,6 +2736,20 @@
             "residualRMSE": 0.57
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.95,
+        "dsmRoofAMSL": 91.46,
+        "lidarHeightMeters": 17.59,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 14.5,
+        "ndsmMaxHeight": 26.62,
+        "ndsmP95Height": 17.52,
+        "heightDifference": 0.07,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.81,
+        "sampledCells": 64
       }
     },
     {
@@ -2618,6 +2842,20 @@
             "residualRMSE": 2.64
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.07,
+        "dsmRoofAMSL": 88.6,
+        "lidarHeightMeters": 16.45,
+        "ndsmMinHeight": 3.82,
+        "ndsmMedianHeight": 4.63,
+        "ndsmMaxHeight": 16.67,
+        "ndsmP95Height": 16.52,
+        "heightDifference": 0.07,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 195
       }
     },
     {
@@ -2739,6 +2977,20 @@
             "residualRMSE": 0.09
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.72,
+        "dsmRoofAMSL": 87.61,
+        "lidarHeightMeters": 16.03,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 13.19,
+        "ndsmMaxHeight": 16.08,
+        "ndsmP95Height": 15.9,
+        "heightDifference": 0.13,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.9,
+        "sampledCells": 468
       }
     },
     {
@@ -2884,6 +3136,20 @@
             "residualRMSE": 0.44
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.32,
+        "dsmRoofAMSL": 87.08,
+        "lidarHeightMeters": 15.64,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 11.8,
+        "ndsmMaxHeight": 16.8,
+        "ndsmP95Height": 14.77,
+        "heightDifference": 0.87,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 1366
       }
     },
     {
@@ -3008,6 +3274,20 @@
             "residualRMSE": 0.16
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.35,
+        "dsmRoofAMSL": 88.32,
+        "lidarHeightMeters": 15.49,
+        "ndsmMinHeight": 6.42,
+        "ndsmMedianHeight": 15.38,
+        "ndsmMaxHeight": 16.08,
+        "ndsmP95Height": 15.99,
+        "heightDifference": 0.5,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 137
       }
     },
     {
@@ -3149,6 +3429,20 @@
             "residualRMSE": 0.05
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.97,
+        "dsmRoofAMSL": 85.33,
+        "lidarHeightMeters": 14.55,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 11.96,
+        "ndsmMaxHeight": 15.55,
+        "ndsmP95Height": 13.36,
+        "heightDifference": 1.19,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 736
       }
     },
     {
@@ -3284,6 +3578,20 @@
             "residualRMSE": 2.28
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.35,
+        "dsmRoofAMSL": 86.93,
+        "lidarHeightMeters": 14.52,
+        "ndsmMinHeight": 4.14,
+        "ndsmMedianHeight": 5.98,
+        "ndsmMaxHeight": 15.49,
+        "ndsmP95Height": 14.49,
+        "heightDifference": 0.03,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 871
       }
     },
     {
@@ -3395,6 +3703,20 @@
             "residualRMSE": 2.29
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.63,
+        "dsmRoofAMSL": 79.58,
+        "lidarHeightMeters": 14.49,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 6.32,
+        "ndsmMaxHeight": 16.59,
+        "ndsmP95Height": 6.96,
+        "heightDifference": 7.53,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.85,
+        "sampledCells": 1049
       }
     },
     {
@@ -3492,6 +3814,20 @@
             "residualRMSE": 0.18
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.65,
+        "dsmRoofAMSL": 87.79,
+        "lidarHeightMeters": 14.35,
+        "ndsmMinHeight": 13.97,
+        "ndsmMedianHeight": 14.24,
+        "ndsmMaxHeight": 15.97,
+        "ndsmP95Height": 15.15,
+        "heightDifference": 0.8,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 488
       }
     },
     {
@@ -3594,6 +3930,20 @@
             "residualRMSE": 1.01
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.65,
+        "dsmRoofAMSL": 86.7,
+        "lidarHeightMeters": 14.14,
+        "ndsmMinHeight": 5.62,
+        "ndsmMedianHeight": 9.81,
+        "ndsmMaxHeight": 14.9,
+        "ndsmP95Height": 14.04,
+        "heightDifference": 0.1,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 812
       }
     },
     {
@@ -3744,6 +4094,20 @@
             "residualRMSE": 0.37
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.04,
+        "dsmRoofAMSL": 84.81,
+        "lidarHeightMeters": 13.88,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 11.1,
+        "ndsmMaxHeight": 17.59,
+        "ndsmP95Height": 12.84,
+        "heightDifference": 1.04,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 1709
       }
     },
     {
@@ -3905,6 +4269,20 @@
             "residualRMSE": 0.32
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.99,
+        "dsmRoofAMSL": 87.0,
+        "lidarHeightMeters": 13.75,
+        "ndsmMinHeight": 13.06,
+        "ndsmMedianHeight": 13.62,
+        "ndsmMaxHeight": 15.39,
+        "ndsmP95Height": 15.0,
+        "heightDifference": 1.25,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 443
       }
     },
     {
@@ -4003,6 +4381,20 @@
             "residualRMSE": 0.17
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.78,
+        "dsmRoofAMSL": 85.03,
+        "lidarHeightMeters": 13.36,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 10.9,
+        "ndsmMaxHeight": 13.42,
+        "ndsmP95Height": 13.23,
+        "heightDifference": 0.13,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 321
       }
     },
     {
@@ -4109,6 +4501,20 @@
             "residualRMSE": 0.22
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.3,
+        "dsmRoofAMSL": 82.76,
+        "lidarHeightMeters": 13.29,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 10.54,
+        "ndsmMaxHeight": 13.3,
+        "ndsmP95Height": 11.5,
+        "heightDifference": 1.79,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.91,
+        "sampledCells": 476
       }
     },
     {
@@ -4239,6 +4645,20 @@
             "residualRMSE": 0.08
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.6,
+        "dsmRoofAMSL": 84.77,
+        "lidarHeightMeters": 13.27,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 11.36,
+        "ndsmMaxHeight": 13.26,
+        "ndsmP95Height": 13.17,
+        "heightDifference": 0.1,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.88,
+        "sampledCells": 106
       }
     },
     {
@@ -4336,6 +4756,20 @@
             "residualRMSE": 0.46
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.87,
+        "dsmRoofAMSL": 85.66,
+        "lidarHeightMeters": 12.84,
+        "ndsmMinHeight": 4.72,
+        "ndsmMedianHeight": 12.76,
+        "ndsmMaxHeight": 15.61,
+        "ndsmP95Height": 13.78,
+        "heightDifference": 0.94,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 582
       }
     },
     {
@@ -4451,6 +4885,20 @@
             "residualRMSE": 1.61
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.84,
+        "dsmRoofAMSL": 84.16,
+        "lidarHeightMeters": 12.63,
+        "ndsmMinHeight": 3.36,
+        "ndsmMedianHeight": 5.45,
+        "ndsmMaxHeight": 14.64,
+        "ndsmP95Height": 12.26,
+        "heightDifference": 0.37,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 604
       }
     },
     {
@@ -4542,6 +4990,20 @@
             "residualRMSE": 2.04
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.76,
+        "dsmRoofAMSL": 84.44,
+        "lidarHeightMeters": 12.5,
+        "ndsmMinHeight": 4.51,
+        "ndsmMedianHeight": 5.82,
+        "ndsmMaxHeight": 15.35,
+        "ndsmP95Height": 12.57,
+        "heightDifference": 0.07,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 584
       }
     },
     {
@@ -4637,6 +5099,20 @@
             "residualRMSE": 1.53
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.06,
+        "dsmRoofAMSL": 79.33,
+        "lidarHeightMeters": 12.39,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.96,
+        "ndsmMaxHeight": 17.34,
+        "ndsmP95Height": 7.25,
+        "heightDifference": 5.14,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.85,
+        "sampledCells": 580
       }
     },
     {
@@ -4756,6 +5232,20 @@
             "residualRMSE": 1.74
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.18,
+        "dsmRoofAMSL": 82.82,
+        "lidarHeightMeters": 12.21,
+        "ndsmMinHeight": 5.69,
+        "ndsmMedianHeight": 6.17,
+        "ndsmMaxHeight": 14.09,
+        "ndsmP95Height": 10.54,
+        "heightDifference": 1.67,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 986
       }
     },
     {
@@ -4840,6 +5330,20 @@
             "residualRMSE": 1.61
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.44,
+        "dsmRoofAMSL": 77.85,
+        "lidarHeightMeters": 12.13,
+        "ndsmMinHeight": 3.94,
+        "ndsmMedianHeight": 4.51,
+        "ndsmMaxHeight": 13.33,
+        "ndsmP95Height": 5.33,
+        "heightDifference": 6.8,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.85,
+        "sampledCells": 627
       }
     },
     {
@@ -4966,6 +5470,20 @@
             "residualRMSE": 0.1
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.25,
+        "dsmRoofAMSL": 83.14,
+        "lidarHeightMeters": 11.76,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 9.37,
+        "ndsmMaxHeight": 14.57,
+        "ndsmP95Height": 10.89,
+        "heightDifference": 0.87,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 3183
       }
     },
     {
@@ -5081,6 +5599,20 @@
             "residualRMSE": 0.42
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.28,
+        "dsmRoofAMSL": 84.66,
+        "lidarHeightMeters": 11.75,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 8.16,
+        "ndsmMaxHeight": 14.69,
+        "ndsmP95Height": 12.37,
+        "heightDifference": 0.62,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 1332
       }
     },
     {
@@ -5172,6 +5704,20 @@
             "residualRMSE": 1.01
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.81,
+        "dsmRoofAMSL": 83.48,
+        "lidarHeightMeters": 11.43,
+        "ndsmMinHeight": 4.64,
+        "ndsmMedianHeight": 5.34,
+        "ndsmMaxHeight": 11.84,
+        "ndsmP95Height": 11.63,
+        "heightDifference": 0.2,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 347
       }
     },
     {
@@ -5262,6 +5808,20 @@
             "residualRMSE": 0.24
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.83,
+        "dsmRoofAMSL": 83.65,
+        "lidarHeightMeters": 10.94,
+        "ndsmMinHeight": 4.19,
+        "ndsmMedianHeight": 10.83,
+        "ndsmMaxHeight": 12.16,
+        "ndsmP95Height": 11.91,
+        "heightDifference": 0.97,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 342
       }
     },
     {
@@ -5416,6 +5976,20 @@
             "residualRMSE": 0.27
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.33,
+        "dsmRoofAMSL": 84.5,
+        "lidarHeightMeters": 10.82,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 10.48,
+        "ndsmMaxHeight": 12.79,
+        "ndsmP95Height": 11.24,
+        "heightDifference": 0.42,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 654
       }
     },
     {
@@ -5507,6 +6081,20 @@
             "residualRMSE": 1.56
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.41,
+        "dsmRoofAMSL": 83.08,
+        "lidarHeightMeters": 10.8,
+        "ndsmMinHeight": 4.09,
+        "ndsmMedianHeight": 5.65,
+        "ndsmMaxHeight": 14.55,
+        "ndsmP95Height": 10.64,
+        "heightDifference": 0.16,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 422
       }
     },
     {
@@ -5614,6 +6202,20 @@
             "residualRMSE": 1.09
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.63,
+        "dsmRoofAMSL": 81.67,
+        "lidarHeightMeters": 10.66,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 6.0,
+        "ndsmMaxHeight": 12.27,
+        "ndsmP95Height": 9.0,
+        "heightDifference": 1.66,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 1566
       }
     },
     {
@@ -5829,6 +6431,20 @@
             "residualRMSE": 0.89
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.09,
+        "dsmRoofAMSL": 81.76,
+        "lidarHeightMeters": 10.41,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.99,
+        "ndsmMaxHeight": 12.56,
+        "ndsmP95Height": 9.07,
+        "heightDifference": 1.34,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 3215
       }
     },
     {
@@ -5983,6 +6599,20 @@
             "residualRMSE": 0.3
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.85,
+        "dsmRoofAMSL": 89.18,
+        "lidarHeightMeters": 9.85,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 9.85,
+        "ndsmMaxHeight": 25.48,
+        "ndsmP95Height": 16.29,
+        "heightDifference": 6.44,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.85,
+        "sampledCells": 368
       }
     },
     {
@@ -6074,6 +6704,20 @@
             "residualRMSE": 1.24
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.93,
+        "dsmRoofAMSL": 80.26,
+        "lidarHeightMeters": 9.79,
+        "ndsmMinHeight": 4.45,
+        "ndsmMedianHeight": 4.81,
+        "ndsmMaxHeight": 11.25,
+        "ndsmP95Height": 8.32,
+        "heightDifference": 1.47,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 333
       }
     },
     {
@@ -6285,6 +6929,20 @@
             "residualRMSE": 1.86
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.01,
+        "dsmRoofAMSL": 83.48,
+        "lidarHeightMeters": 9.69,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 8.4,
+        "ndsmMaxHeight": 24.62,
+        "ndsmP95Height": 10.49,
+        "heightDifference": 0.8,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 1624
       }
     },
     {
@@ -6376,6 +7034,20 @@
             "residualRMSE": 0.85
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.57,
+        "dsmRoofAMSL": 82.12,
+        "lidarHeightMeters": 9.63,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.54,
+        "ndsmMaxHeight": 10.69,
+        "ndsmP95Height": 8.39,
+        "heightDifference": 1.24,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 1354
       }
     },
     {
@@ -6491,6 +7163,20 @@
             "residualRMSE": 0.74
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.8,
+        "dsmRoofAMSL": 81.81,
+        "lidarHeightMeters": 9.59,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 8.93,
+        "ndsmMaxHeight": 10.42,
+        "ndsmP95Height": 10.1,
+        "heightDifference": 0.51,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 196
       }
     },
     {
@@ -6585,6 +7271,20 @@
             "residualRMSE": 0.23
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 74.16,
+        "dsmRoofAMSL": 83.47,
+        "lidarHeightMeters": 9.46,
+        "ndsmMinHeight": 6.48,
+        "ndsmMedianHeight": 8.74,
+        "ndsmMaxHeight": 10.21,
+        "ndsmP95Height": 9.6,
+        "heightDifference": 0.14,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 258
       }
     },
     {
@@ -6676,6 +7376,20 @@
             "residualRMSE": 0.55
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.1,
+        "dsmRoofAMSL": 78.58,
+        "lidarHeightMeters": 9.27,
+        "ndsmMinHeight": 4.7,
+        "ndsmMedianHeight": 5.76,
+        "ndsmMaxHeight": 11.73,
+        "ndsmP95Height": 6.52,
+        "heightDifference": 2.75,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.9,
+        "sampledCells": 1109
       }
     },
     {
@@ -6835,6 +7549,20 @@
             "residualRMSE": 0.4
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.38,
+        "dsmRoofAMSL": 81.43,
+        "lidarHeightMeters": 9.19,
+        "ndsmMinHeight": 2.71,
+        "ndsmMedianHeight": 5.62,
+        "ndsmMaxHeight": 11.97,
+        "ndsmP95Height": 9.97,
+        "heightDifference": 0.78,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 921
       }
     },
     {
@@ -6934,6 +7662,20 @@
             "residualRMSE": 0.43
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.46,
+        "dsmRoofAMSL": 81.64,
+        "lidarHeightMeters": 9.17,
+        "ndsmMinHeight": 4.52,
+        "ndsmMedianHeight": 5.08,
+        "ndsmMaxHeight": 9.03,
+        "ndsmP95Height": 8.97,
+        "heightDifference": 0.2,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 129
       }
     },
     {
@@ -7040,6 +7782,20 @@
             "residualRMSE": 0.16
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.72,
+        "dsmRoofAMSL": 81.27,
+        "lidarHeightMeters": 9.12,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 8.96,
+        "ndsmMaxHeight": 10.6,
+        "ndsmP95Height": 9.55,
+        "heightDifference": 0.43,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 305
       }
     },
     {
@@ -7143,6 +7899,20 @@
             "residualRMSE": 0.67
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.1,
+        "dsmRoofAMSL": 81.58,
+        "lidarHeightMeters": 9.01,
+        "ndsmMinHeight": 3.53,
+        "ndsmMedianHeight": 5.59,
+        "ndsmMaxHeight": 10.3,
+        "ndsmP95Height": 9.44,
+        "heightDifference": 0.43,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 722
       }
     },
     {
@@ -7322,6 +8092,20 @@
             "residualRMSE": 0.44
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.03,
+        "dsmRoofAMSL": 81.99,
+        "lidarHeightMeters": 8.52,
+        "ndsmMinHeight": 5.38,
+        "ndsmMedianHeight": 8.06,
+        "ndsmMaxHeight": 9.84,
+        "ndsmP95Height": 8.97,
+        "heightDifference": 0.45,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 823
       }
     },
     {
@@ -7429,6 +8213,20 @@
             "residualRMSE": 0.66
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.95,
+        "dsmRoofAMSL": 77.49,
+        "lidarHeightMeters": 8.52,
+        "ndsmMinHeight": 4.13,
+        "ndsmMedianHeight": 4.73,
+        "ndsmMaxHeight": 10.49,
+        "ndsmP95Height": 5.61,
+        "heightDifference": 2.91,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.89,
+        "sampledCells": 586
       }
     },
     {
@@ -7520,6 +8318,20 @@
             "residualRMSE": 0.24
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.19,
+        "dsmRoofAMSL": 81.06,
+        "lidarHeightMeters": 8.5,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 8.33,
+        "ndsmMaxHeight": 9.85,
+        "ndsmP95Height": 8.83,
+        "heightDifference": 0.33,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 375
       }
     },
     {
@@ -7615,6 +8427,20 @@
             "residualRMSE": 1.11
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.23,
+        "dsmRoofAMSL": 80.41,
+        "lidarHeightMeters": 8.44,
+        "ndsmMinHeight": 4.35,
+        "ndsmMedianHeight": 5.36,
+        "ndsmMaxHeight": 13.98,
+        "ndsmP95Height": 8.19,
+        "heightDifference": 0.25,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 572
       }
     },
     {
@@ -7702,6 +8528,20 @@
             "residualRMSE": 0.16
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.24,
+        "dsmRoofAMSL": 81.12,
+        "lidarHeightMeters": 8.39,
+        "ndsmMinHeight": 7.64,
+        "ndsmMedianHeight": 7.92,
+        "ndsmMaxHeight": 16.08,
+        "ndsmP95Height": 8.85,
+        "heightDifference": 0.46,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 321
       }
     },
     {
@@ -7878,6 +8718,20 @@
             "residualRMSE": 0.34
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.75,
+        "dsmRoofAMSL": 78.6,
+        "lidarHeightMeters": 7.97,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.05,
+        "ndsmMaxHeight": 7.93,
+        "ndsmP95Height": 6.86,
+        "heightDifference": 1.11,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 339
       }
     },
     {
@@ -7973,6 +8827,20 @@
             "residualRMSE": 0.03
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.7,
+        "dsmRoofAMSL": 79.32,
+        "lidarHeightMeters": 7.86,
+        "ndsmMinHeight": 4.64,
+        "ndsmMedianHeight": 6.22,
+        "ndsmMaxHeight": 11.14,
+        "ndsmP95Height": 7.66,
+        "heightDifference": 0.2,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 573
       }
     },
     {
@@ -8072,6 +8940,20 @@
             "residualRMSE": 0.26
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.87,
+        "dsmRoofAMSL": 81.65,
+        "lidarHeightMeters": 7.85,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 7.44,
+        "ndsmMaxHeight": 9.3,
+        "ndsmP95Height": 8.81,
+        "heightDifference": 0.96,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 694
       }
     },
     {
@@ -8171,6 +9053,20 @@
             "residualRMSE": 0.31
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.64,
+        "dsmRoofAMSL": 79.99,
+        "lidarHeightMeters": 7.72,
+        "ndsmMinHeight": 6.91,
+        "ndsmMedianHeight": 7.3,
+        "ndsmMaxHeight": 10.99,
+        "ndsmP95Height": 8.5,
+        "heightDifference": 0.78,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 304
       }
     },
     {
@@ -8266,6 +9162,20 @@
             "residualRMSE": 0.12
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.78,
+        "dsmRoofAMSL": 80.26,
+        "lidarHeightMeters": 7.71,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.51,
+        "ndsmMaxHeight": 7.7,
+        "ndsmP95Height": 7.47,
+        "heightDifference": 0.24,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 843
       }
     },
     {
@@ -8385,6 +9295,20 @@
             "residualRMSE": 1.35
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.65,
+        "dsmRoofAMSL": 83.33,
+        "lidarHeightMeters": 7.66,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.84,
+        "ndsmMaxHeight": 12.08,
+        "ndsmP95Height": 11.65,
+        "heightDifference": 3.99,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.87,
+        "sampledCells": 415
       }
     },
     {
@@ -8468,6 +9392,20 @@
             "residualRMSE": 0.32
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.11,
+        "dsmRoofAMSL": 80.27,
+        "lidarHeightMeters": 7.64,
+        "ndsmMinHeight": 4.76,
+        "ndsmMedianHeight": 7.41,
+        "ndsmMaxHeight": 8.5,
+        "ndsmP95Height": 8.21,
+        "heightDifference": 0.57,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 720
       }
     },
     {
@@ -8552,6 +9490,20 @@
             "residualRMSE": 0.12
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.85,
+        "dsmRoofAMSL": 77.71,
+        "lidarHeightMeters": 7.57,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.09,
+        "ndsmMaxHeight": 7.39,
+        "ndsmP95Height": 5.88,
+        "heightDifference": 1.69,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 407
       }
     },
     {
@@ -8635,6 +9587,20 @@
             "residualRMSE": 0.23
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.22,
+        "dsmRoofAMSL": 80.45,
+        "lidarHeightMeters": 7.48,
+        "ndsmMinHeight": 7.14,
+        "ndsmMedianHeight": 7.3,
+        "ndsmMaxHeight": 9.69,
+        "ndsmP95Height": 8.28,
+        "heightDifference": 0.8,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 577
       }
     },
     {
@@ -8822,6 +9788,20 @@
             "residualRMSE": 0.16
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.76,
+        "dsmRoofAMSL": 80.59,
+        "lidarHeightMeters": 7.42,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 7.38,
+        "ndsmMaxHeight": 8.58,
+        "ndsmP95Height": 7.76,
+        "heightDifference": 0.34,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 619
       }
     },
     {
@@ -8918,6 +9898,20 @@
             "residualRMSE": 0.22
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.73,
+        "dsmRoofAMSL": 79.4,
+        "lidarHeightMeters": 7.41,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.52,
+        "ndsmMaxHeight": 8.0,
+        "ndsmP95Height": 7.68,
+        "heightDifference": 0.27,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 644
       }
     },
     {
@@ -9009,6 +10003,20 @@
             "residualRMSE": 0.06
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.51,
+        "dsmRoofAMSL": 79.96,
+        "lidarHeightMeters": 7.37,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.12,
+        "ndsmMaxHeight": 7.14,
+        "ndsmP95Height": 6.5,
+        "heightDifference": 0.87,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 1583
       }
     },
     {
@@ -9093,6 +10101,20 @@
             "residualRMSE": 0.44
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.47,
+        "dsmRoofAMSL": 78.74,
+        "lidarHeightMeters": 7.36,
+        "ndsmMinHeight": 3.42,
+        "ndsmMedianHeight": 4.05,
+        "ndsmMaxHeight": 9.32,
+        "ndsmP95Height": 6.82,
+        "heightDifference": 0.54,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 609
       }
     },
     {
@@ -9189,6 +10211,20 @@
             "residualRMSE": 0.11
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.25,
+        "dsmRoofAMSL": 78.31,
+        "lidarHeightMeters": 7.35,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.08,
+        "ndsmMaxHeight": 14.24,
+        "ndsmP95Height": 6.07,
+        "heightDifference": 1.28,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.87,
+        "sampledCells": 203
       }
     },
     {
@@ -9272,6 +10308,20 @@
             "residualRMSE": 0.43
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.18,
+        "dsmRoofAMSL": 80.25,
+        "lidarHeightMeters": 7.27,
+        "ndsmMinHeight": 4.23,
+        "ndsmMedianHeight": 6.65,
+        "ndsmMaxHeight": 11.81,
+        "ndsmP95Height": 8.17,
+        "heightDifference": 0.9,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 1007
       }
     },
     {
@@ -9408,6 +10458,20 @@
             "residualRMSE": 0.31
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.56,
+        "dsmRoofAMSL": 79.37,
+        "lidarHeightMeters": 7.26,
+        "ndsmMinHeight": 3.38,
+        "ndsmMedianHeight": 5.01,
+        "ndsmMaxHeight": 9.03,
+        "ndsmP95Height": 6.9,
+        "heightDifference": 0.36,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 1909
       }
     },
     {
@@ -9492,6 +10556,20 @@
             "residualRMSE": 0.14
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.2,
+        "dsmRoofAMSL": 79.15,
+        "lidarHeightMeters": 7.2,
+        "ndsmMinHeight": 4.04,
+        "ndsmMedianHeight": 4.75,
+        "ndsmMaxHeight": 7.97,
+        "ndsmP95Height": 7.01,
+        "heightDifference": 0.19,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 548
       }
     },
     {
@@ -9604,6 +10682,20 @@
             "residualRMSE": 0.21
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.95,
+        "dsmRoofAMSL": 78.52,
+        "lidarHeightMeters": 7.12,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.95,
+        "ndsmMaxHeight": 8.36,
+        "ndsmP95Height": 6.58,
+        "heightDifference": 0.54,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 360
       }
     },
     {
@@ -9704,6 +10796,20 @@
             "residualRMSE": 0.18
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.19,
+        "dsmRoofAMSL": 80.02,
+        "lidarHeightMeters": 7.02,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.29,
+        "ndsmMaxHeight": 8.76,
+        "ndsmP95Height": 6.69,
+        "heightDifference": 0.33,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 459
       }
     },
     {
@@ -9803,6 +10909,20 @@
             "residualRMSE": 0.41
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.75,
+        "dsmRoofAMSL": 77.84,
+        "lidarHeightMeters": 7.0,
+        "ndsmMinHeight": 4.11,
+        "ndsmMedianHeight": 6.17,
+        "ndsmMaxHeight": 8.76,
+        "ndsmP95Height": 7.07,
+        "heightDifference": 0.07,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 1366
       }
     },
     {
@@ -9886,6 +11006,20 @@
             "residualRMSE": 0.06
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.92,
+        "dsmRoofAMSL": 80.69,
+        "lidarHeightMeters": 6.89,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 1.59,
+        "ndsmMaxHeight": 6.84,
+        "ndsmP95Height": 6.81,
+        "heightDifference": 0.08,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.82,
+        "sampledCells": 18
       }
     },
     {
@@ -9997,6 +11131,20 @@
             "residualRMSE": 0.66
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.31,
+        "dsmRoofAMSL": 80.29,
+        "lidarHeightMeters": 6.86,
+        "ndsmMinHeight": 1.26,
+        "ndsmMedianHeight": 7.11,
+        "ndsmMaxHeight": 8.92,
+        "ndsmP95Height": 7.99,
+        "heightDifference": 1.13,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 589
       }
     },
     {
@@ -10080,6 +11228,20 @@
             "residualRMSE": 0.28
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.94,
+        "dsmRoofAMSL": 79.45,
+        "lidarHeightMeters": 6.81,
+        "ndsmMinHeight": 6.17,
+        "ndsmMedianHeight": 6.45,
+        "ndsmMaxHeight": 7.68,
+        "ndsmP95Height": 7.46,
+        "heightDifference": 0.65,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 313
       }
     },
     {
@@ -10163,6 +11325,20 @@
             "residualRMSE": 0.25
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.01,
+        "dsmRoofAMSL": 79.48,
+        "lidarHeightMeters": 6.71,
+        "ndsmMinHeight": 6.17,
+        "ndsmMedianHeight": 6.39,
+        "ndsmMaxHeight": 7.6,
+        "ndsmP95Height": 7.41,
+        "heightDifference": 0.7,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 312
       }
     },
     {
@@ -10246,6 +11422,20 @@
             "residualRMSE": 0.38
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.83,
+        "dsmRoofAMSL": 80.36,
+        "lidarHeightMeters": 6.65,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 6.36,
+        "ndsmMaxHeight": 8.68,
+        "ndsmP95Height": 7.53,
+        "heightDifference": 0.88,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 844
       }
     },
     {
@@ -10330,6 +11520,20 @@
             "residualRMSE": 0.1
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.64,
+        "dsmRoofAMSL": 77.56,
+        "lidarHeightMeters": 6.53,
+        "ndsmMinHeight": 3.7,
+        "ndsmMedianHeight": 4.51,
+        "ndsmMaxHeight": 6.38,
+        "ndsmP95Height": 5.93,
+        "heightDifference": 0.6,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 443
       }
     },
     {
@@ -10470,6 +11674,20 @@
             "residualRMSE": 0.35
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.77,
+        "dsmRoofAMSL": 79.53,
+        "lidarHeightMeters": 6.47,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.76,
+        "ndsmMaxHeight": 17.76,
+        "ndsmP95Height": 6.79,
+        "heightDifference": 0.32,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 907
       }
     },
     {
@@ -10573,6 +11791,20 @@
             "residualRMSE": 0.34
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.2,
+        "dsmRoofAMSL": 79.94,
+        "lidarHeightMeters": 6.11,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.4,
+        "ndsmMaxHeight": 6.85,
+        "ndsmP95Height": 6.63,
+        "heightDifference": 0.52,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 467
       }
     },
     {
@@ -10688,6 +11920,20 @@
             "residualRMSE": 0.27
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.41,
+        "dsmRoofAMSL": 79.9,
+        "lidarHeightMeters": 6.08,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.88,
+        "ndsmMaxHeight": 7.34,
+        "ndsmP95Height": 6.54,
+        "heightDifference": 0.46,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 1441
       }
     },
     {
@@ -10771,6 +12017,20 @@
             "residualRMSE": 0.15
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 74.1,
+        "dsmRoofAMSL": 80.41,
+        "lidarHeightMeters": 6.03,
+        "ndsmMinHeight": 5.19,
+        "ndsmMedianHeight": 5.57,
+        "ndsmMaxHeight": 6.87,
+        "ndsmP95Height": 6.56,
+        "heightDifference": 0.53,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 317
       }
     },
     {
@@ -11038,6 +12298,20 @@
             "residualRMSE": 0.33
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.84,
+        "dsmRoofAMSL": 79.15,
+        "lidarHeightMeters": 5.98,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.97,
+        "ndsmMaxHeight": 14.32,
+        "ndsmP95Height": 7.36,
+        "heightDifference": 1.38,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 290
       }
     },
     {
@@ -11141,6 +12415,20 @@
             "residualRMSE": 0.17
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.1,
+        "dsmRoofAMSL": 79.54,
+        "lidarHeightMeters": 5.95,
+        "ndsmMinHeight": 2.09,
+        "ndsmMedianHeight": 5.71,
+        "ndsmMaxHeight": 9.79,
+        "ndsmP95Height": 6.47,
+        "heightDifference": 0.52,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 477
       }
     },
     {
@@ -11248,6 +12536,20 @@
             "residualRMSE": 0.3
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.73,
+        "dsmRoofAMSL": 79.26,
+        "lidarHeightMeters": 5.82,
+        "ndsmMinHeight": 3.3,
+        "ndsmMedianHeight": 5.61,
+        "ndsmMaxHeight": 6.83,
+        "ndsmP95Height": 6.52,
+        "heightDifference": 0.7,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 675
       }
     },
     {
@@ -11331,6 +12633,20 @@
             "residualRMSE": 0.53
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.7,
+        "dsmRoofAMSL": 77.72,
+        "lidarHeightMeters": 5.82,
+        "ndsmMinHeight": 4.42,
+        "ndsmMedianHeight": 5.7,
+        "ndsmMaxHeight": 7.85,
+        "ndsmP95Height": 6.08,
+        "heightDifference": 0.26,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 583
       }
     },
     {
@@ -11430,6 +12746,20 @@
             "residualRMSE": 0.33
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.92,
+        "dsmRoofAMSL": 79.02,
+        "lidarHeightMeters": 5.81,
+        "ndsmMinHeight": 4.71,
+        "ndsmMedianHeight": 5.61,
+        "ndsmMaxHeight": 6.89,
+        "ndsmP95Height": 6.08,
+        "heightDifference": 0.27,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 767
       }
     },
     {
@@ -11525,6 +12855,20 @@
             "residualRMSE": 0.19
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.03,
+        "dsmRoofAMSL": 79.3,
+        "lidarHeightMeters": 5.77,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 5.41,
+        "ndsmMaxHeight": 10.67,
+        "ndsmP95Height": 6.07,
+        "heightDifference": 0.3,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 469
       }
     },
     {
@@ -11624,6 +12968,20 @@
             "residualRMSE": 0.43
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.34,
+        "dsmRoofAMSL": 77.78,
+        "lidarHeightMeters": 5.73,
+        "ndsmMinHeight": 2.26,
+        "ndsmMedianHeight": 6.12,
+        "ndsmMaxHeight": 6.9,
+        "ndsmP95Height": 6.83,
+        "heightDifference": 1.1,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 287
       }
     },
     {
@@ -11727,6 +13085,20 @@
             "residualRMSE": 0.14
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.98,
+        "dsmRoofAMSL": 76.12,
+        "lidarHeightMeters": 5.21,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.87,
+        "ndsmMaxHeight": 9.85,
+        "ndsmP95Height": 5.17,
+        "heightDifference": 0.04,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 2266
       }
     },
     {
@@ -11826,6 +13198,20 @@
             "residualRMSE": 0.27
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 73.09,
+        "dsmRoofAMSL": 78.85,
+        "lidarHeightMeters": 5.19,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.93,
+        "ndsmMaxHeight": 6.03,
+        "ndsmP95Height": 5.75,
+        "heightDifference": 0.56,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 1245
       }
     },
     {
@@ -11938,6 +13324,20 @@
             "residualRMSE": 0.23
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.17,
+        "dsmRoofAMSL": 80.6,
+        "lidarHeightMeters": 5.05,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.93,
+        "ndsmMaxHeight": 9.34,
+        "ndsmP95Height": 8.46,
+        "heightDifference": 3.41,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.88,
+        "sampledCells": 556
       }
     },
     {
@@ -12046,6 +13446,20 @@
             "residualRMSE": 0.12
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.69,
+        "dsmRoofAMSL": 76.98,
+        "lidarHeightMeters": 5.03,
+        "ndsmMinHeight": 1.06,
+        "ndsmMedianHeight": 4.65,
+        "ndsmMaxHeight": 6.26,
+        "ndsmP95Height": 5.27,
+        "heightDifference": 0.24,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 681
       }
     },
     {
@@ -12133,6 +13547,20 @@
             "residualRMSE": 0.26
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.95,
+        "dsmRoofAMSL": 81.2,
+        "lidarHeightMeters": 4.9,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.86,
+        "ndsmMaxHeight": 12.8,
+        "ndsmP95Height": 9.21,
+        "heightDifference": 4.31,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.86,
+        "sampledCells": 650
       }
     },
     {
@@ -12329,6 +13757,20 @@
             "residualRMSE": 0.28
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.41,
+        "dsmRoofAMSL": 76.41,
+        "lidarHeightMeters": 4.89,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.56,
+        "ndsmMaxHeight": 9.31,
+        "ndsmP95Height": 5.04,
+        "heightDifference": 0.15,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 1212
       }
     },
     {
@@ -12409,6 +13851,20 @@
             "residualRMSE": 0.27
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.85,
+        "dsmRoofAMSL": 77.71,
+        "lidarHeightMeters": 4.86,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.67,
+        "ndsmMaxHeight": 6.5,
+        "ndsmP95Height": 5.9,
+        "heightDifference": 1.04,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 785
       }
     },
     {
@@ -12565,6 +14021,20 @@
             "residualRMSE": 0.26
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.83,
+        "dsmRoofAMSL": 78.03,
+        "lidarHeightMeters": 4.63,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.43,
+        "ndsmMaxHeight": 8.89,
+        "ndsmP95Height": 5.21,
+        "heightDifference": 0.58,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 520
       }
     },
     {
@@ -12641,6 +14111,20 @@
             "residualRMSE": 0.15
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.89,
+        "dsmRoofAMSL": 75.9,
+        "lidarHeightMeters": 4.62,
+        "ndsmMinHeight": 4.36,
+        "ndsmMedianHeight": 4.59,
+        "ndsmMaxHeight": 5.1,
+        "ndsmP95Height": 5.04,
+        "heightDifference": 0.42,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.8,
+        "sampledCells": 18
       }
     },
     {
@@ -12721,6 +14205,20 @@
             "residualRMSE": 0.25
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.08,
+        "dsmRoofAMSL": 76.65,
+        "lidarHeightMeters": 4.46,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.26,
+        "ndsmMaxHeight": 9.55,
+        "ndsmP95Height": 5.48,
+        "heightDifference": 1.02,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 192
       }
     },
     {
@@ -12817,6 +14315,20 @@
             "residualRMSE": 0.46
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.48,
+        "dsmRoofAMSL": 76.97,
+        "lidarHeightMeters": 4.44,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 4.25,
+        "ndsmMaxHeight": 5.64,
+        "ndsmP95Height": 5.34,
+        "heightDifference": 0.9,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 172
       }
     },
     {
@@ -12897,6 +14409,20 @@
             "residualRMSE": 0.21
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.62,
+        "dsmRoofAMSL": 76.41,
+        "lidarHeightMeters": 4.41,
+        "ndsmMinHeight": 3.84,
+        "ndsmMedianHeight": 4.04,
+        "ndsmMaxHeight": 5.06,
+        "ndsmP95Height": 4.91,
+        "heightDifference": 0.5,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 148
       }
     },
     {
@@ -12985,6 +14511,20 @@
             "residualRMSE": 0.64
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.61,
+        "dsmRoofAMSL": 77.29,
+        "lidarHeightMeters": 4.36,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 0.0,
+        "ndsmMaxHeight": 14.19,
+        "ndsmP95Height": 5.71,
+        "heightDifference": 1.35,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 412
       }
     },
     {
@@ -13061,6 +14601,20 @@
             "residualRMSE": 0.24
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.18,
+        "dsmRoofAMSL": 77.03,
+        "lidarHeightMeters": 4.3,
+        "ndsmMinHeight": 3.65,
+        "ndsmMedianHeight": 3.95,
+        "ndsmMaxHeight": 5.45,
+        "ndsmP95Height": 4.88,
+        "heightDifference": 0.58,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 373
       }
     },
     {
@@ -13153,6 +14707,20 @@
             "residualRMSE": 0.26
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.86,
+        "dsmRoofAMSL": 76.19,
+        "lidarHeightMeters": 4.12,
+        "ndsmMinHeight": 2.73,
+        "ndsmMedianHeight": 3.73,
+        "ndsmMaxHeight": 13.04,
+        "ndsmP95Height": 4.42,
+        "heightDifference": 0.3,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 703
       }
     },
     {
@@ -13241,6 +14809,20 @@
             "residualRMSE": 0.5
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.29,
+        "dsmRoofAMSL": 77.18,
+        "lidarHeightMeters": 4.08,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 3.9,
+        "ndsmMaxHeight": 7.14,
+        "ndsmP95Height": 4.92,
+        "heightDifference": 0.84,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.8,
+        "sampledCells": 42
       }
     },
     {
@@ -13317,6 +14899,20 @@
             "residualRMSE": 0.26
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.67,
+        "dsmRoofAMSL": 77.53,
+        "lidarHeightMeters": 3.98,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 3.94,
+        "ndsmMaxHeight": 6.18,
+        "ndsmP95Height": 5.94,
+        "heightDifference": 1.96,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.91,
+        "sampledCells": 35
       }
     },
     {
@@ -13401,6 +14997,20 @@
             "residualRMSE": 0.19
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 72.08,
+        "dsmRoofAMSL": 76.28,
+        "lidarHeightMeters": 3.88,
+        "ndsmMinHeight": 1.96,
+        "ndsmMedianHeight": 3.34,
+        "ndsmMaxHeight": 5.34,
+        "ndsmP95Height": 4.36,
+        "heightDifference": 0.48,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 585
       }
     },
     {
@@ -13477,6 +15087,20 @@
             "residualRMSE": 0.33
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.62,
+        "dsmRoofAMSL": 77.0,
+        "lidarHeightMeters": 3.8,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 3.81,
+        "ndsmMaxHeight": 5.38,
+        "ndsmP95Height": 5.37,
+        "heightDifference": 1.57,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.8,
+        "sampledCells": 41
       }
     },
     {
@@ -13553,6 +15177,20 @@
             "residualRMSE": 0.33
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.86,
+        "dsmRoofAMSL": 76.16,
+        "lidarHeightMeters": 3.33,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 3.18,
+        "ndsmMaxHeight": 4.43,
+        "ndsmP95Height": 4.32,
+        "heightDifference": 0.99,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 88
       }
     },
     {
@@ -13629,6 +15267,20 @@
             "residualRMSE": 0.3
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.0,
+        "dsmRoofAMSL": 73.86,
+        "lidarHeightMeters": 3.21,
+        "ndsmMinHeight": 3.01,
+        "ndsmMedianHeight": 3.47,
+        "ndsmMaxHeight": 3.96,
+        "ndsmP95Height": 3.87,
+        "heightDifference": 0.66,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 28
       }
     },
     {
@@ -13705,6 +15357,20 @@
             "residualRMSE": 0.09
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.91,
+        "dsmRoofAMSL": 75.03,
+        "lidarHeightMeters": 3.2,
+        "ndsmMinHeight": 2.72,
+        "ndsmMedianHeight": 3.04,
+        "ndsmMaxHeight": 3.39,
+        "ndsmP95Height": 3.12,
+        "heightDifference": 0.08,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 34
       }
     },
     {
@@ -13789,6 +15455,20 @@
             "residualRMSE": 0.21
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 74.04,
+        "dsmRoofAMSL": 77.34,
+        "lidarHeightMeters": 3.11,
+        "ndsmMinHeight": 0.0,
+        "ndsmMedianHeight": 2.52,
+        "ndsmMaxHeight": 4.09,
+        "ndsmP95Height": 3.25,
+        "heightDifference": 0.14,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 336
       }
     },
     {
@@ -13865,6 +15545,20 @@
             "residualRMSE": 0.19
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.49,
+        "dsmRoofAMSL": 75.69,
+        "lidarHeightMeters": 2.93,
+        "ndsmMinHeight": 1.54,
+        "ndsmMedianHeight": 3.14,
+        "ndsmMaxHeight": 4.72,
+        "ndsmP95Height": 4.6,
+        "heightDifference": 1.67,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 27
       }
     },
     {
@@ -13993,6 +15687,20 @@
             "residualRMSE": 0.35
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.31,
+        "dsmRoofAMSL": 74.25,
+        "lidarHeightMeters": 2.88,
+        "ndsmMinHeight": 2.38,
+        "ndsmMedianHeight": 2.92,
+        "ndsmMaxHeight": 4.07,
+        "ndsmP95Height": 4.03,
+        "heightDifference": 1.15,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 18
       }
     },
     {
@@ -14069,6 +15777,20 @@
             "residualRMSE": 0.26
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.64,
+        "dsmRoofAMSL": 74.47,
+        "lidarHeightMeters": 2.78,
+        "ndsmMinHeight": 1.78,
+        "ndsmMedianHeight": 2.36,
+        "ndsmMaxHeight": 3.8,
+        "ndsmP95Height": 3.65,
+        "heightDifference": 0.87,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 24
       }
     },
     {
@@ -14145,6 +15867,20 @@
             "residualRMSE": 0.28
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.93,
+        "dsmRoofAMSL": 74.5,
+        "lidarHeightMeters": 2.75,
+        "ndsmMinHeight": 1.63,
+        "ndsmMedianHeight": 2.28,
+        "ndsmMaxHeight": 3.27,
+        "ndsmP95Height": 3.24,
+        "heightDifference": 0.49,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.94,
+        "sampledCells": 33
       }
     },
     {
@@ -14237,6 +15973,20 @@
             "residualRMSE": 0.34
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.51,
+        "dsmRoofAMSL": 78.43,
+        "lidarHeightMeters": 2.74,
+        "ndsmMinHeight": 2.44,
+        "ndsmMedianHeight": 2.65,
+        "ndsmMaxHeight": 9.09,
+        "ndsmP95Height": 7.99,
+        "heightDifference": 5.25,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.85,
+        "sampledCells": 22
       }
     },
     {
@@ -14313,6 +16063,20 @@
             "residualRMSE": 0.24
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 70.2,
+        "dsmRoofAMSL": 73.78,
+        "lidarHeightMeters": 2.71,
+        "ndsmMinHeight": 2.44,
+        "ndsmMedianHeight": 2.62,
+        "ndsmMaxHeight": 3.73,
+        "ndsmP95Height": 3.62,
+        "heightDifference": 0.91,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.93,
+        "sampledCells": 31
       }
     },
     {
@@ -14389,6 +16153,20 @@
             "residualRMSE": 0.38
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.1,
+        "dsmRoofAMSL": 75.44,
+        "lidarHeightMeters": 2.68,
+        "ndsmMinHeight": 2.42,
+        "ndsmMedianHeight": 3.25,
+        "ndsmMaxHeight": 4.5,
+        "ndsmP95Height": 4.36,
+        "heightDifference": 1.68,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.92,
+        "sampledCells": 7
       }
     },
     {
@@ -14473,7 +16251,33 @@
             "residualRMSE": 0.11
           }
         ]
+      },
+      "elevationMetrics": {
+        "demGroundAMSL": 71.85,
+        "dsmRoofAMSL": 74.37,
+        "lidarHeightMeters": 2.51,
+        "ndsmMinHeight": 2.36,
+        "ndsmMedianHeight": 2.44,
+        "ndsmMaxHeight": 2.67,
+        "ndsmP95Height": 2.63,
+        "heightDifference": 0.12,
+        "elevationSource": "USGS 3DEP Real LiDAR (1m nDSM Grid)",
+        "elevationProvenance": "Derived from REAL LiDAR",
+        "confidence": 0.95,
+        "sampledCells": 26
       }
     }
-  ]
+  ],
+  "elevationPipeline": {
+    "status": "OPERATIONAL",
+    "pipelineVersion": "1.0.0",
+    "method": "ASPRS Class 2 Bare-Earth DTM + Highest-Return DSM + 1m nDSM",
+    "groundClassification": "ASPRS_CLASS_2_STANDARD_GROUND",
+    "demResolutionMeters": 1.0,
+    "dsmResolutionMeters": 1.0,
+    "verticalDatum": "NAVD88 (Meters AMSL)",
+    "provenance": "Derived from REAL LiDAR",
+    "disclaimer": "Derived from REAL LiDAR. Not official cadastral/ULPIN elevation data.",
+    "updatedAt": "2026-10-05T09:55:26.975532Z"
+  }
 }

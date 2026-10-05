@@ -16,7 +16,8 @@ import {
   LABuildingRecord,
   LADatasetMetadata,
   FloorInspectionOptions,
-  PointCloudRenderOptions
+  PointCloudRenderOptions,
+  ElevationMode
 } from '../../types/lidar';
 import { lidarService } from '../../services/lidarService';
 import { VerticalPlacementDebugPanel } from '../lidar/VerticalPlacementDebugPanel';
@@ -32,6 +33,7 @@ interface CesiumViewerProps {
   onSelectFloor?: (floor: number | null) => void;
   floorInspectionOptions: FloorInspectionOptions;
   layers: LayerVisibilityState;
+  elevationMode?: ElevationMode;
   pointCloudOptions: PointCloudRenderOptions;
   yoloDetections: YoloBuildingDetection[];
   onViewerReady?: (viewer: Cesium.Viewer) => void;
@@ -51,6 +53,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   onSelectFloor,
   floorInspectionOptions,
   layers,
+  elevationMode = 'none',
   pointCloudOptions,
   yoloDetections,
   onViewerReady,
@@ -65,6 +68,7 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const baseLayerRef = useRef<Cesium.ImageryLayer | null>(null);
   const realBuildingEntityRef = useRef<Cesium.Entity | null>(null);
+  const elevationLayerRef = useRef<Cesium.ImageryLayer | null>(null);
   const floorEntitiesRef = useRef<Cesium.Entity[]>([]);
   const pointPrimitivesRef = useRef<Cesium.PointPrimitiveCollection | null>(null);
   const buildingEntitiesRef = useRef<Cesium.Entity[]>([]);
@@ -356,6 +360,46 @@ export const CesiumViewer: React.FC<CesiumViewerProps> = ({
       baseLayerRef.current.show = layers.satellite;
     }
   }, [layers.satellite]);
+
+  // 2B. Elevation Mode Raster Overlay (DEM / DSM / nDSM)
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) return;
+
+    if (elevationLayerRef.current) {
+      viewer.imageryLayers.remove(elevationLayerRef.current);
+      elevationLayerRef.current = null;
+    }
+
+    if (elevationMode && elevationMode !== 'none') {
+      const imgMap: Record<string, string> = {
+        dem: '/data/lidar/dem/dem_surface.png',
+        dsm: '/data/lidar/dsm/dsm_surface.png',
+        ndsm: '/data/lidar/ndsm/ndsm_surface.png'
+      };
+
+      const imageUrl = imgMap[elevationMode];
+      if (imageUrl) {
+        // Precise geographic bounds calculated from real USGS 3DEP LiDAR point cloud
+        const elevationRectangle = Cesium.Rectangle.fromDegrees(
+          -118.26394432831962,
+          34.03520531945292,
+          -118.25786138637235,
+          34.03898454898699
+        );
+
+        const provider = new Cesium.SingleTileImageryProvider({
+          url: imageUrl,
+          rectangle: elevationRectangle
+        });
+
+        const layer = viewer.imageryLayers.addImageryProvider(provider);
+        layer.alpha = elevationMode === 'ndsm' ? 0.92 : 0.85;
+        layer.show = true;
+        elevationLayerRef.current = layer;
+      }
+    }
+  }, [elevationMode]);
 
   // 3. Terrain Provider Management
   useEffect(() => {

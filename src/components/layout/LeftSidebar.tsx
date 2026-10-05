@@ -12,9 +12,10 @@ import {
   CheckCircle2,
   Ruler,
   Globe2,
-  Maximize2
+  Maximize2,
+  Mountain
 } from 'lucide-react';
-import { LABuildingRecord } from '../../types/lidar';
+import { LABuildingRecord, ElevationMode } from '../../types/lidar';
 
 export interface LayerVisibilityState {
   satellite: boolean;
@@ -30,6 +31,8 @@ export interface LayerVisibilityState {
 interface LeftSidebarProps {
   layers: LayerVisibilityState;
   onToggleLayer: (layer: keyof LayerVisibilityState) => void;
+  elevationMode?: ElevationMode;
+  onChangeElevationMode?: (mode: ElevationMode) => void;
   buildings: LABuildingRecord[];
   selectedBuilding: LABuildingRecord | null;
   onSelectBuilding: (building: LABuildingRecord | null) => void;
@@ -45,6 +48,8 @@ interface LeftSidebarProps {
 export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   layers,
   onToggleLayer,
+  elevationMode = 'none',
+  onChangeElevationMode,
   buildings,
   selectedBuilding,
   onSelectBuilding,
@@ -186,6 +191,86 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             {layers.osm ? 'ON' : 'OFF'}
           </span>
         </button>
+      </div>
+
+      {/* SECTION: ELEVATION MODE (Derived from REAL LiDAR) */}
+      <div className="space-y-2 pt-2 border-t border-zinc-850">
+        <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold px-1">
+          <span className="flex items-center gap-1.5">
+            <Mountain className="w-3.5 h-3.5 text-cyan-400" />
+            <span>ELEVATION MODE</span>
+          </span>
+          <span className="text-[9px] text-cyan-400 font-bold">1m REAL LiDAR</span>
+        </div>
+
+        {/* 4-way Segmented Control: OFF | DEM | DSM | nDSM */}
+        <div className="grid grid-cols-4 gap-1 p-1 bg-zinc-950 border border-zinc-800 rounded-xl font-mono text-[10px]">
+          <button
+            onClick={() => onChangeElevationMode?.('none')}
+            className={`py-1.5 rounded-lg font-bold transition-all text-center ${
+              elevationMode === 'none'
+                ? 'bg-zinc-800 text-white shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            OFF
+          </button>
+          <button
+            onClick={() => onChangeElevationMode?.('dem')}
+            title="Bare-Earth Digital Elevation Model (ASPRS Class 2 Ground Interpolation)"
+            className={`py-1.5 rounded-lg font-bold transition-all text-center ${
+              elevationMode === 'dem'
+                ? 'bg-emerald-500 text-black shadow-sm font-extrabold'
+                : 'text-zinc-400 hover:text-emerald-300'
+            }`}
+          >
+            DEM
+          </button>
+          <button
+            onClick={() => onChangeElevationMode?.('dsm')}
+            title="Digital Surface Model (Highest LiDAR Pulse Returns)"
+            className={`py-1.5 rounded-lg font-bold transition-all text-center ${
+              elevationMode === 'dsm'
+                ? 'bg-purple-500 text-white shadow-sm font-extrabold'
+                : 'text-zinc-400 hover:text-purple-300'
+            }`}
+          >
+            DSM
+          </button>
+          <button
+            onClick={() => onChangeElevationMode?.('ndsm')}
+            title="Normalized DSM (Heights above Ground = DSM - DEM)"
+            className={`py-1.5 rounded-lg font-bold transition-all text-center ${
+              elevationMode === 'ndsm'
+                ? 'bg-amber-500 text-black shadow-sm font-extrabold'
+                : 'text-zinc-400 hover:text-amber-300'
+            }`}
+          >
+            nDSM
+          </button>
+        </div>
+
+        {/* Active Elevation Mode Legend Banner */}
+        {elevationMode !== 'none' && (
+          <div className="p-2 rounded-xl bg-zinc-950/80 border border-zinc-800 space-y-1 text-[10px] font-mono animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-400">
+                {elevationMode === 'dem' && 'Bare-Earth DTM/DEM'}
+                {elevationMode === 'dsm' && 'Top Surface DSM'}
+                {elevationMode === 'ndsm' && 'Normalized Height nDSM'}
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-700 text-zinc-300 font-bold">
+                {elevationMode === 'dem' && '69.0 – 74.4m AMSL'}
+                {elevationMode === 'dsm' && '69.9 – 129.6m AMSL'}
+                {elevationMode === 'ndsm' && '0.0 – 55.9m Above Ground'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-[9px]">
+              <span className="text-zinc-500">1.0m Raster Grid</span>
+              <span className="text-emerald-400 font-semibold">Derived from REAL LiDAR</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* SECTION 2: ANALYSIS (Derived Geometric Models) */}

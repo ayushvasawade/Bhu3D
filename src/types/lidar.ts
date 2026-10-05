@@ -66,12 +66,32 @@ export interface LABuildingRecord {
   // Real geometric validation metrics
   validation?: LABuildingValidation;
 
+  // Real LiDAR DEM / DSM / nDSM Elevation Foundation Metrics
+  elevationMetrics?: BuildingElevationMetrics;
+
   // YOLO segmentation & fusion properties (actual runtime inference results only)
   yoloMaskCoordinates?: [number, number][];
   yoloConfidence?: number;
   yoloIoU?: number;
   alignmentScore?: number;
   dataFusionStatus?: 'ALIGNED' | 'MINOR_OFFSET' | 'MISMATCH' | 'YOLO_ONLY' | 'OSM_ONLY';
+}
+
+export type ElevationMode = 'none' | 'dem' | 'dsm' | 'ndsm';
+
+export interface BuildingElevationMetrics {
+  demGroundAMSL: number;
+  dsmRoofAMSL: number;
+  lidarHeightMeters: number;
+  ndsmMinHeight: number;
+  ndsmMedianHeight: number;
+  ndsmMaxHeight: number;
+  ndsmP95Height: number;
+  heightDifference: number;
+  elevationSource: string;
+  elevationProvenance: string;
+  confidence: number;
+  sampledCells: number;
 }
 
 export interface LidarMesh3DFidelity {
@@ -182,5 +202,19 @@ export interface LADatasetMetadata {
     modelFile: string;
     pointsFile: string;
   };
+  elevationPipeline?: ElevationPipelineMetadata;
   buildings: LABuildingRecord[];
+}
+
+export interface ElevationPipelineMetadata {
+  status: string;
+  pipelineVersion: string;
+  method: string;
+  groundClassification: string;
+  demResolutionMeters: number;
+  dsmResolutionMeters: number;
+  verticalDatum: string;
+  provenance: string;
+  disclaimer: string;
+  updatedAt: string;
 }
