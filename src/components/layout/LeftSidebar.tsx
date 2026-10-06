@@ -331,8 +331,8 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           <div className="flex items-center gap-2">
             <Scan className={`w-4 h-4 ${layers.yolo ? 'text-pink-400' : 'text-zinc-600'}`} />
             <div>
-              <span className="font-semibold block leading-tight">YOLOv8 Segmentation</span>
-              <span className="text-[9px] text-zinc-400 font-sans">Magenta Aerial Contour</span>
+              <span className="font-semibold block leading-tight">AI Building Segmentation</span>
+              <span className="text-[9px] text-zinc-400 font-sans">Research / Future Module</span>
             </div>
           </div>
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

@@ -1256,8 +1256,8 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
                 <Scan className="w-3.5 h-3.5 text-pink-400" />
                 <span>YOLOv8 Aerial Segmentation</span>
               </span>
-              <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-pink-950 text-pink-300 border border-pink-800">
-                AI VALIDATION
+              <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                RESEARCH / FUTURE MODULE
               </span>
             </div>
 
@@ -1273,7 +1273,7 @@ export const BuildingDetailsPage: React.FC<BuildingDetailsPageProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-zinc-500">Status:</span>
                 <span className={building.yoloMaskCoordinates ? "text-pink-400 font-bold" : "text-amber-400 font-bold"}>
-                  {building.yoloMaskCoordinates ? "ACTIVE DETECTION" : "UNAVAILABLE ON COCO"}
+                  {building.yoloMaskCoordinates ? "ACTIVE DETECTION" : "RESEARCH / FUTURE MODULE (COCO stock model)"}
                 </span>
               </div>
               {building.yoloConfidence && (

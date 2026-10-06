@@ -764,12 +764,14 @@ export const LABuildingCard: React.FC<LABuildingCardProps> = ({
             <div className="flex items-center justify-between text-zinc-400">
               <span className="flex items-center gap-1">
                 <Scan className="w-3 h-3 text-zinc-500" />
-                <span>YOLO Segmentation:</span>
+                <span>AI Building Extraction:</span>
               </span>
-              <span className="text-amber-400 font-bold">UNAVAILABLE</span>
+              <span className="text-amber-400 font-bold text-[8.5px] px-1.5 py-0.2 rounded bg-amber-950/80 border border-amber-800">
+                RESEARCH / FUTURE MODULE
+              </span>
             </div>
             <p className="text-[9px] text-zinc-500 font-sans leading-tight">
-              Standard COCO model does not contain a building class. Dedicated building model can be placed at /models/building-segmentation.onnx.
+              Standard COCO model does not contain a dedicated building class. Model serves as research/validation contour reference.
             </p>
           </div>
         )}
